@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Money Collection</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="top-bar">
+        <div class="user-info">
+          <span id="user-name"></span>
+          <span id="user-email" class="user-email"></span>
+        </div>
+        <button id="logout-btn" type="button" class="btn-secondary">Logout</button>
+      </div>
+      <h1>Money Collection</h1>
+      <p class="subtitle">Click cells to select amounts</p>
+    </header>
+
+    <div class="content-wrapper">
+      <aside class="sidebar">
+        <div class="summary">
+          <div class="summary-card">
+            <span class="summary-label">Selected</span>
+            <span id="selected-count" class="summary-value">0</span>
+          </div>
+          <div class="summary-card total-card">
+            <span class="summary-label">Selected Total</span>
+            <span id="total" class="summary-value">0</span>
+          </div>
+          <div class="summary-card expected-card">
+            <span class="summary-label">All Values Count</span>
+            <span id="all-values-count" class="summary-value">0</span>
+          </div>
+          <div class="summary-card expected-card">
+            <span class="summary-label">Expected Total</span>
+            <span id="expected-total" class="summary-value">0</span>
+          </div>
+          <button id="clear-btn" type="button">Clear all</button>
+          <p id="save-status" class="save-status" aria-live="polite">Loading...</p>
+        <div class="sidebar-buttons">
+          <button id="open-settings-btn" class="btn-secondary">⚙️ Collection Settings</button>
+          <button id="open-color-settings-btn" class="btn-secondary">🎨 Color Settings</button>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <div id="grid" class="grid" role="grid" aria-label="Money collection grid"></div>
+      </main>
+    </div>
+  </div>
+
+  <div id="settings-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Collection Settings</h2>
+        <button type="button" class="close-modal-btn" aria-label="Close">&times;</button>
+      </div>
+      <form id="settings-form" class="settings-form">
+        <label>
+          Starting value
+          <input type="number" id="start-value" name="start_value" min="0" step="1" required>
+        </label>
+        <label>
+          Gap value
+          <input type="number" id="gap-value" name="gap_value" min="1" step="1" required>
+        </label>
+        <label>
+          Button count
+          <input type="number" id="button-count" name="button_count" min="1" max="500" step="1" required>
+        </label>
+        <label>
+          Columns
+          <input type="number" id="columns" name="columns" min="1" max="20" step="1" required>
+        </label>
+        <button type="submit" class="btn-primary settings-submit">Apply settings</button>
+      </form>
+      <label class="same-value-option">
+        <input type="checkbox" id="same-value" name="same_value">
+        Same value for all buttons
+      </label>
+      <p class="settings-hint">Example: start 40, gap 40 → 40, 80, 120... Tick same value to show 40 on every button.</p>
+    </div>
+  </div>
+
+  <div id="color-settings-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Selected Button Colors</h2>
+        <button type="button" class="close-modal-btn" aria-label="Close">&times;</button>
+      </div>
+      <p class="settings-hint">Set value ranges and colors for selected buttons. Saved with your account.</p>
+      <form id="color-settings-form" class="color-rules-form">
+        <div id="color-rules-list"></div>
+        <div class="color-rules-actions">
+          <button type="button" id="add-color-rule" class="btn-add-rule" aria-label="Add color range">+ Add range</button>
+        </div>
+        <button type="submit" class="btn-primary color-settings-submit">Save color settings</button>
+        <p id="color-save-message" class="color-save-message" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
