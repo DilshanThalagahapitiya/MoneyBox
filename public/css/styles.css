@@ -688,9 +688,10 @@ header h1 {
   }
 
   .cell {
-    font-size: clamp(0.55rem, 3vw, 0.85rem);
-    padding: 4px 2px;
+    font-size: clamp(0.45rem, 2.5vw, 0.75rem);
+    padding: 2px;
     min-height: 38px;
+    letter-spacing: -0.5px; /* Condense slightly to fit long numbers */
   }
 }
 
