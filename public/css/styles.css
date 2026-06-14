@@ -28,6 +28,14 @@ body {
   line-height: 1.5;
 }
 
+/* ── Mobile: allow scrolling ── */
+@media (max-width: 900px) {
+  body {
+    height: auto;
+    overflow-y: auto;
+  }
+}
+
 .app {
   max-width: 1600px; /* Expand to make grid full screen */
   margin: 0 auto;
@@ -69,8 +77,8 @@ header {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  padding: 0.6rem 1rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -592,21 +600,101 @@ header h1 {
 }
 
 @media (max-width: 900px) {
+  /* Reset desktop no-scroll layout for mobile */
+  .app {
+    height: auto;
+    padding: 0.75rem 0.75rem 1.5rem;
+  }
+
+  header {
+    margin-bottom: 0.75rem;
+  }
+
+  header h1 {
+    font-size: 1.3rem;
+  }
+
+  .subtitle {
+    display: none; /* hide subtitle on mobile to save space */
+  }
+
   .content-wrapper {
     flex-direction: column;
+    gap: 0.75rem;
+    flex: none; /* don't flex-stretch on mobile */
   }
-  
+
   .sidebar {
     flex: none;
     width: 100%;
   }
+
+  /* Summary becomes a compact 2x2 horizontal grid */
+  .summary {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .summary-card {
+    padding: 0.6rem 0.5rem;
+  }
+
+  .summary-label {
+    font-size: 0.7rem;
+  }
+
+  .summary-value {
+    font-size: 1.1rem;
+  }
+
+  /* Clear + save-status inline */
+  #clear-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .save-status {
+    font-size: 0.75rem;
+  }
+
+  /* Buttons side by side */
+  .sidebar-buttons {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+
+  .sidebar-buttons .btn-secondary {
+    flex: 1;
+    font-size: 0.8rem;
+    padding: 0.6rem 0.5rem;
+    text-align: center;
+  }
+
+  /* Main grid: full width, tall, scrollable */
+  .main-content {
+    height: auto;
+    min-height: 60vh;
+  }
+
+  .grid {
+    flex: none;
+    min-height: 60vh;
+    gap: 3px;
+    padding: 6px;
+    /* Override JS row height — let cells be square-ish */
+    grid-template-rows: unset !important;
+    grid-auto-rows: minmax(38px, auto);
+  }
+
+  .cell {
+    font-size: clamp(0.55rem, 3vw, 0.85rem);
+    padding: 4px 2px;
+    min-height: 38px;
+  }
 }
 
 @media (max-width: 720px) {
-  .app {
-    padding: 1.25rem 0.75rem 2rem;
-  }
-
   .settings-form {
     grid-template-columns: 1fr 1fr;
   }
@@ -622,20 +710,5 @@ header h1 {
   .settings-submit {
     grid-column: 1 / -1;
     width: 100%;
-  }
-
-  /* Make grid fully responsive on mobile without scrolling */
-  .grid {
-    gap: 2px;
-    padding: 4px;
-  }
-
-  .summary-card {
-    min-width: 0;
-    padding: 0.5rem;
-  }
-
-  .summary-value {
-    font-size: 1.2rem;
   }
 }
