@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - Money Collection</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card">
+      <h1>Create Account</h1>
+      <p class="subtitle">Sign up to save your collection</p>
+
+      <form id="auth-form" class="auth-form" novalidate>
+        <label>
+          Name
+          <input type="text" name="name" autocomplete="name" required>
+        </label>
+        <label>
+          Email
+          <input type="email" name="email" autocomplete="email" required>
+        </label>
+        <label>
+          Password
+          <input type="password" name="password" autocomplete="new-password" minlength="6" required>
+        </label>
+        <p id="form-message" class="form-message" aria-live="polite"></p>
+        <button type="submit" class="btn-primary">Sign Up</button>
+      </form>
+
+      <p class="auth-links">
+        Already have an account? <a href="/login.html">Sign in</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    redirectIfAuthenticated();
+    setupAuthForm({
+      formId: "auth-form",
+      submitUrl: "/api/auth/signup",
+      successRedirect: "/",
+      getPayload: (formData) => ({
+        name: formData.get("name"),
+        email: formData.get("email"),
+        password: formData.get("password"),
+      }),
+    });
+  </script>
+</body>
+</html>
