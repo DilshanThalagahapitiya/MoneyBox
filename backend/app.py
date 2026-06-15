@@ -193,8 +193,9 @@ def create_app() -> Flask:
             button_count = int(config.get("button_count", 100))
             columns = int(config.get("columns", 10))
             same_value = bool(config.get("same_value", False))
+            lock_time_minutes = int(config.get("lock_time_minutes", 0))
         except (TypeError, ValueError):
-            return None, "Config values must be numbers"
+            return None, "Config values must be valid numbers"
 
         if start_value < 0:
             return None, "Starting value cannot be negative"
@@ -209,6 +210,24 @@ def create_app() -> Flask:
         if color_error:
             return None, color_error
 
+        raw_partials = config.get("partial_payments", {})
+        partial_payments = {}
+        if isinstance(raw_partials, dict):
+            for k, v in raw_partials.items():
+                try:
+                    partial_payments[str(int(k))] = int(v)
+                except (ValueError, TypeError):
+                    pass
+
+        raw_timestamps = config.get("selected_timestamps", {})
+        selected_timestamps = {}
+        if isinstance(raw_timestamps, dict):
+            for k, v in raw_timestamps.items():
+                try:
+                    selected_timestamps[str(int(k))] = int(v)
+                except (ValueError, TypeError):
+                    pass
+
         return {
             "start_value": start_value,
             "gap_value": gap_value if not same_value else max(gap_value, 1),
@@ -217,6 +236,9 @@ def create_app() -> Flask:
             "same_value": same_value,
             "selection_type": "index",
             "color_rules": color_rules,
+            "partial_payments": partial_payments,
+            "lock_time_minutes": lock_time_minutes,
+            "selected_timestamps": selected_timestamps,
         }, None
 
     @app.get("/api/data")

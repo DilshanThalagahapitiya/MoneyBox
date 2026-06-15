@@ -1,0 +1,21 @@
+/* Desktop specific tweaks */
+@media (min-width: 768px) {
+  .app, .floating-actions {
+    max-width: 1200px;
+  }
+  
+  .grid {
+    grid-auto-rows: minmax(65px, auto);
+    gap: 1rem;
+    padding: 1.5rem;
+  }
+  
+  .cell {
+    font-size: clamp(0.8rem, 1.2vw, 1.1rem);
+    padding: 8px;
+  }
+
+  .grid-card {
+    margin-bottom: 2rem;
+  }
+}

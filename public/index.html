@@ -8,49 +8,117 @@
 </head>
 <body>
   <div class="app">
-    <header>
+    <header class="app-header">
       <div class="top-bar">
-        <div class="user-info">
-          <span id="user-name"></span>
-          <span id="user-email" class="user-email"></span>
+        <div class="user-profile">
+          <div class="user-avatar" id="user-avatar-initials">DT</div>
+          <div class="user-info">
+            <span id="user-name" class="user-name"></span>
+            <span id="user-email" class="user-email"></span>
+          </div>
         </div>
-        <button id="logout-btn" type="button" class="btn-secondary">Logout</button>
+        <button id="logout-btn" type="button" class="btn-logout">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          Logout
+        </button>
       </div>
-      <h1>Money Collection</h1>
-      <p class="subtitle">Click cells to select amounts</p>
+
+      <div class="title-bar">
+        <h1>Money Collection</h1>
+        <button id="clear-btn" type="button" class="btn-clear">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+          Clear all
+        </button>
+      </div>
+      <p id="save-status" class="save-status" aria-live="polite">Loading...</p>
     </header>
 
     <div class="content-wrapper">
-      <aside class="sidebar">
-        <div class="summary">
-          <div class="summary-card">
+      <section class="summary-section">
+        <div class="summary-card">
+          <div class="summary-info">
             <span class="summary-label">Selected</span>
-            <span id="selected-count" class="summary-value">0</span>
+            <span id="selected-count" class="summary-value text-blue">0</span>
           </div>
-          <div class="summary-card total-card">
-            <span class="summary-label">Selected Total</span>
-            <span id="total" class="summary-value">0</span>
+          <div class="summary-icon icon-blue">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
           </div>
-          <div class="summary-card expected-card">
-            <span class="summary-label">All Values Count</span>
-            <span id="all-values-count" class="summary-value">0</span>
-          </div>
-          <div class="summary-card expected-card">
-            <span class="summary-label">Expected Total</span>
-            <span id="expected-total" class="summary-value">0</span>
-          </div>
-          <button id="clear-btn" type="button">Clear all</button>
-          <p id="save-status" class="save-status" aria-live="polite">Loading...</p>
-        <div class="sidebar-buttons">
-          <button id="open-settings-btn" class="btn-secondary">⚙️ Collection Settings</button>
-          <button id="open-color-settings-btn" class="btn-secondary">🎨 Color Settings</button>
         </div>
-      </aside>
+        <div class="summary-card">
+          <div class="summary-info">
+            <span class="summary-label">Selected Total</span>
+            <span id="total" class="summary-value text-red">0</span>
+          </div>
+          <div class="summary-icon icon-red">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-info">
+            <span class="summary-label">All Values Count</span>
+            <span id="all-values-count" class="summary-value text-blue">0</span>
+          </div>
+          <div class="summary-icon icon-blue">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-info">
+            <span class="summary-label">Expected Total</span>
+            <span id="expected-total" class="summary-value text-blue">0</span>
+          </div>
+          <div class="summary-icon icon-blue">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          </div>
+        </div>
+      </section>
 
       <main class="main-content">
-        <div id="grid" class="grid" role="grid" aria-label="Money collection grid"></div>
+        <div class="grid-card">
+          <div class="grid-header">
+            <h2>Select Amount</h2>
+          </div>
+          <div id="grid" class="grid" role="grid" aria-label="Money collection grid"></div>
+        </div>
+        
+        <section class="saved-selections">
+          <h3>Saved Selections</h3>
+          <div class="settings-cards">
+            <div class="setting-card" id="open-settings-btn" role="button" tabindex="0">
+              <div class="setting-icon">⚙️</div>
+              <div class="setting-info">
+                <h4>Collection Settings</h4>
+                <p>Manage collection preferences</p>
+              </div>
+              <div class="setting-arrow">›</div>
+            </div>
+            <div class="setting-card" id="open-color-settings-btn" role="button" tabindex="0">
+              <div class="setting-icon">🎨</div>
+              <div class="setting-info">
+                <h4>Color Settings</h4>
+                <p>Customize color scheme</p>
+              </div>
+              <div class="setting-arrow">›</div>
+            </div>
+            <div class="setting-card" id="open-lock-settings-btn" role="button" tabindex="0">
+              <div class="setting-icon">🔒</div>
+              <div class="setting-info">
+                <h4>Lock Settings</h4>
+                <p>Set time to lock buttons</p>
+              </div>
+              <div class="setting-arrow">›</div>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
+    
+    <!-- <div class="floating-actions">
+      <button class="btn-primary btn-review">
+        Review Collection
+        <span class="btn-arrow">›</span>
+      </button>
+    </div> -->
   </div>
 
   <div id="settings-modal" class="modal-overlay hidden">
@@ -105,6 +173,27 @@
   </div>
 
   <script src="/js/auth.js"></script>
+  <div id="lock-settings-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Lock Settings</h2>
+        <button type="button" class="close-modal-btn">×</button>
+      </div>
+      
+      <form id="lock-settings-form" class="settings-form">
+        <div class="form-group">
+          <label for="lock-time-minutes">Lock Time (Minutes)</label>
+          <input type="number" id="lock-time-minutes" min="0" step="1" required>
+          <small>Time after which a selected button becomes locked. Set to 0 to disable locking.</small>
+        </div>
+        
+        <div class="form-actions" style="grid-column: 1 / -1; margin-top: 1rem;">
+          <button type="submit" class="btn-primary settings-submit">Save Settings</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="/js/app.js"></script>
 </body>
 </html>

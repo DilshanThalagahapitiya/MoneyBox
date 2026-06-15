@@ -41,8 +41,12 @@ const sameValueInput = document.getElementById("same-value");
 
 const openSettingsBtn = document.getElementById("open-settings-btn");
 const openColorSettingsBtn = document.getElementById("open-color-settings-btn");
+const openLockSettingsBtn = document.getElementById("open-lock-settings-btn");
 const settingsModal = document.getElementById("settings-modal");
 const colorSettingsModal = document.getElementById("color-settings-modal");
+const lockSettingsModal = document.getElementById("lock-settings-modal");
+const lockSettingsForm = document.getElementById("lock-settings-form");
+const lockTimeMinutesInput = document.getElementById("lock-time-minutes");
 const closeModalBtns = document.querySelectorAll(".close-modal-btn");
 
 const selected = new Set();
@@ -145,22 +149,54 @@ function getAllValuesTotal(currentConfig) {
   return getGridValues(currentConfig).reduce((sum, value) => sum + value, 0);
 }
 
+function isCellLocked(index) {
+  if (!config.lock_time_minutes || config.lock_time_minutes <= 0) return false;
+  if (!config.selected_timestamps || !config.selected_timestamps[index]) return false;
+  
+  const elapsedMs = Date.now() - config.selected_timestamps[index];
+  const elapsedMinutes = elapsedMs / 60000;
+  return elapsedMinutes > config.lock_time_minutes;
+}
+
 function clearCellStyle(cell) {
-  cell.classList.remove("selected");
+  cell.classList.remove("selected", "cell-partial", "cell-locked");
   cell.style.backgroundColor = "";
   cell.style.borderColor = "";
   cell.style.color = "";
   cell.setAttribute("aria-pressed", "false");
+  const index = cell.dataset.index;
+  if (index !== undefined) {
+    cell.textContent = formatNumber(getValueAtIndex(config, Number(index)));
+  }
 }
 
 function applyCellStyle(cell, index) {
+  if (config.partial_payments && config.partial_payments[index]) {
+    cell.classList.remove("selected");
+    cell.classList.add("cell-partial");
+    cell.textContent = formatNumber(config.partial_payments[index]);
+    cell.style.backgroundColor = "";
+    cell.style.borderColor = "";
+    cell.style.color = "";
+    cell.setAttribute("aria-pressed", "mixed");
+    return;
+  }
+
   const value = getValueAtIndex(config, index);
   const color = getColorForValue(value, config);
+  cell.classList.remove("cell-partial");
   cell.classList.add("selected");
+  cell.textContent = formatNumber(value);
   cell.style.backgroundColor = color;
   cell.style.borderColor = color;
   cell.style.color = "#ffffff";
   cell.setAttribute("aria-pressed", "true");
+  
+  if (isCellLocked(index)) {
+    cell.classList.add("cell-locked");
+  } else {
+    cell.classList.remove("cell-locked");
+  }
 }
 
 function refreshSelectedCellColors() {
@@ -178,10 +214,21 @@ function updateSummary() {
     selectedTotal += getValueAtIndex(config, index);
   }
 
+  if (config.partial_payments) {
+    for (const amount of Object.values(config.partial_payments)) {
+      selectedTotal += Number(amount);
+    }
+  }
+
   totalEl.textContent = formatNumber(selectedTotal);
   selectedCountEl.textContent = formatNumber(selected.size);
   allValuesCountEl.textContent = formatNumber(config.button_count);
   expectedTotalEl.textContent = formatNumber(getAllValuesTotal(config));
+
+  const footerSelectedCountEl = document.getElementById("footer-selected-count");
+  const footerTotalEl = document.getElementById("footer-total");
+  if (footerSelectedCountEl) footerSelectedCountEl.textContent = formatNumber(selected.size);
+  if (footerTotalEl) footerTotalEl.textContent = formatNumber(selectedTotal);
 }
 
 function setSaveStatus(message, isError = false) {
@@ -350,6 +397,7 @@ function applyConfigToForm(currentConfig) {
   buttonCountInput.value = currentConfig.button_count;
   columnsInput.value = currentConfig.columns;
   sameValueInput.checked = Boolean(currentConfig.same_value);
+  lockTimeMinutesInput.value = currentConfig.lock_time_minutes || 0;
   applyColorRulesToForm(currentConfig.color_rules);
   updateGapFieldState();
 }
@@ -369,6 +417,14 @@ function applySelections(indices) {
 
     selected.add(Number(index));
     applyCellStyle(cell, Number(index));
+  }
+
+  if (config.partial_payments) {
+    for (const indexStr of Object.keys(config.partial_payments)) {
+      const idx = Number(indexStr);
+      const cell = cellByIndex.get(idx);
+      if (cell) applyCellStyle(cell, idx);
+    }
   }
 
   updateSummary();
@@ -391,7 +447,46 @@ function rebuildGrid(currentConfig, selectedIndices) {
     cell.setAttribute("role", "gridcell");
     cell.setAttribute("aria-pressed", "false");
     cell.setAttribute("aria-label", `Amount ${formatNumber(value)}`);
-    cell.addEventListener("click", () => toggleCell(cell, index));
+    
+    let pressTimer = null;
+    cell.addEventListener("contextmenu", (e) => { e.preventDefault(); });
+
+    const startPress = () => {
+      pressTimer = setTimeout(() => {
+        handleLongPress(cell, index);
+        pressTimer = null;
+      }, 500);
+    };
+
+    const cancelPress = () => {
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+    };
+
+    cell.addEventListener("mousedown", (e) => {
+      if (e.button === 0) startPress();
+    });
+    cell.addEventListener("mouseup", (e) => {
+      if (pressTimer && e.button === 0) {
+        cancelPress();
+        handleCellClick(cell, index);
+      }
+    });
+    cell.addEventListener("mouseleave", cancelPress);
+    
+    cell.addEventListener("touchstart", (e) => {
+      startPress();
+    });
+    cell.addEventListener("touchend", (e) => {
+      if (pressTimer) {
+        cancelPress();
+        handleCellClick(cell, index);
+        e.preventDefault();
+      }
+    });
+    cell.addEventListener("touchcancel", cancelPress);
 
     cellByIndex.set(index, cell);
     gridEl.appendChild(cell);
@@ -472,6 +567,10 @@ async function saveState(payload) {
 async function saveData() {
   await saveState({
     selected: [...selected].sort((a, b) => a - b),
+    config: { 
+      partial_payments: config.partial_payments || {},
+      selected_timestamps: config.selected_timestamps || {}
+    }
   });
 }
 
@@ -493,12 +592,74 @@ function readConfigFromForm() {
   };
 }
 
+function handleCellClick(cell, index) {
+  if (isCellLocked(index)) {
+    alert("This button is locked.");
+    return;
+  }
+
+  if (config.partial_payments && Object.keys(config.partial_payments).length > 0) {
+    if (!config.partial_payments[index]) {
+      alert("Please complete full amount for the partially paid cell first.");
+      return;
+    } else {
+      delete config.partial_payments[index];
+      selected.add(index);
+      applyCellStyle(cell, index);
+      updateSummary();
+      saveData();
+      return;
+    }
+  }
+  toggleCell(cell, index);
+}
+
+function handleLongPress(cell, index) {
+  if (isCellLocked(index)) {
+    alert("This button is locked.");
+    return;
+  }
+
+  if (selected.has(index)) return;
+  
+  if (config.partial_payments && Object.keys(config.partial_payments).length > 0) {
+    if (!config.partial_payments[index]) {
+      alert("Please complete full amount for the partially paid cell first.");
+      return;
+    }
+  }
+
+  const fullValue = getValueAtIndex(config, index);
+  const amountStr = prompt(`Enter partial amount (Full value: ${fullValue}):`, Math.floor(fullValue / 2));
+  if (!amountStr) return;
+  const amount = parseInt(amountStr, 10);
+  if (isNaN(amount) || amount <= 0 || amount >= fullValue) {
+    alert("Invalid partial amount.");
+    return;
+  }
+
+  if (!config.partial_payments) config.partial_payments = {};
+  config.partial_payments[index] = amount;
+  
+  if (!config.selected_timestamps) config.selected_timestamps = {};
+  config.selected_timestamps[index] = Date.now();
+  
+  applyCellStyle(cell, index);
+  updateSummary();
+  saveData();
+}
+
 function toggleCell(cell, index) {
   if (selected.has(index)) {
     selected.delete(index);
+    if (config.selected_timestamps) {
+      delete config.selected_timestamps[index];
+    }
     clearCellStyle(cell);
   } else {
     selected.add(index);
+    if (!config.selected_timestamps) config.selected_timestamps = {};
+    config.selected_timestamps[index] = Date.now();
     applyCellStyle(cell, index);
   }
 
@@ -559,8 +720,12 @@ async function saveColorRules() {
 }
 
 clearBtn.addEventListener("click", async () => {
-  applySelections([]);
-  await saveData();
+  if (window.confirm("Are you sure you want to clear all selections? This action cannot be undone.")) {
+    config.partial_payments = {};
+    config.selected_timestamps = {};
+    applySelections([]);
+    await saveData();
+  }
 });
 
 sameValueInput.addEventListener("change", updateGapFieldState);
@@ -601,6 +766,22 @@ colorSettingsForm.addEventListener("submit", async (event) => {
   }
 });
 
+lockSettingsForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  config.lock_time_minutes = parseInt(lockTimeMinutesInput.value, 10);
+  
+  const data = await saveState({
+    selected: [...selected],
+    config: { lock_time_minutes: config.lock_time_minutes }
+  });
+
+  if (data) {
+    applyCollectionConfig(data);
+    refreshSelectedCellColors();
+    closeModal(lockSettingsModal);
+  }
+});
+
 function openModal(modal) {
   modal.classList.remove("hidden");
 }
@@ -611,6 +792,7 @@ function closeModal(modal) {
 
 openSettingsBtn.addEventListener("click", () => openModal(settingsModal));
 openColorSettingsBtn.addEventListener("click", () => openModal(colorSettingsModal));
+openLockSettingsBtn.addEventListener("click", () => openModal(lockSettingsModal));
 
 closeModalBtns.forEach((btn) => {
   btn.addEventListener("click", (e) => {

@@ -16,6 +16,9 @@ DEFAULT_CONFIG = {
     "columns": 10,
     "same_value": False,
     "selection_type": "index",
+    "partial_payments": {},
+    "lock_time_minutes": 0,
+    "selected_timestamps": {},
 }
 
 DEFAULT_COLOR_RULES = [
@@ -240,6 +243,27 @@ def _normalize_color_rules(rules: list) -> list:
 
 def _normalize_config(config: dict) -> dict:
     merged = {**DEFAULT_CONFIG, **(config or {})}
+    
+    # Normalize partial_payments: ensure keys are strings representing ints, and values are ints
+    raw_partials = merged.get("partial_payments", {})
+    partial_payments = {}
+    if isinstance(raw_partials, dict):
+        for k, v in raw_partials.items():
+            try:
+                partial_payments[str(int(k))] = int(v)
+            except (ValueError, TypeError):
+                pass
+
+    # Normalize selected_timestamps: keys strings, values ints (unix timestamp)
+    raw_timestamps = merged.get("selected_timestamps", {})
+    selected_timestamps = {}
+    if isinstance(raw_timestamps, dict):
+        for k, v in raw_timestamps.items():
+            try:
+                selected_timestamps[str(int(k))] = int(v)
+            except (ValueError, TypeError):
+                pass
+
     return {
         "start_value": int(merged["start_value"]),
         "gap_value": int(merged["gap_value"]),
@@ -248,6 +272,9 @@ def _normalize_config(config: dict) -> dict:
         "same_value": bool(merged.get("same_value", False)),
         "selection_type": "index",
         "color_rules": _normalize_color_rules(merged.get("color_rules", DEFAULT_COLOR_RULES)),
+        "partial_payments": partial_payments,
+        "lock_time_minutes": int(merged.get("lock_time_minutes", 0)),
+        "selected_timestamps": selected_timestamps,
     }
 
 
