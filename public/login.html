@@ -3,34 +3,53 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign In - Money Collection</title>
+  <title>Sign In — Money Collection</title>
+  <meta name="description" content="Sign in to access your Money Collection dashboard.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    body { font-family: 'Inter', sans-serif; margin: 0; }
+  </style>
 </head>
 <body>
   <div class="auth-page">
     <div class="auth-card">
-      <h1>Sign In</h1>
-      <p class="subtitle">Access your money collection</p>
 
+      <!-- Brand -->
+      <div class="auth-brand">
+        <div class="auth-brand-icon">💰</div>
+        <span class="auth-brand-name">MoneyBox</span>
+      </div>
+
+      <!-- Heading -->
+      <h1>Welcome back</h1>
+      <p class="subtitle">Sign in to your account to continue</p>
+
+      <!-- Form -->
       <form id="auth-form" class="auth-form" novalidate>
         <label>
-          Email
-          <input type="email" name="email" autocomplete="email" required>
+          Email address
+          <input type="email" name="email" placeholder="you@example.com" autocomplete="email" required>
         </label>
+
         <label>
           Password
-          <input type="password" name="password" autocomplete="current-password" required>
+          <input type="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
         </label>
+
+        <div class="auth-forgot-link">
+          <a href="/forgot-password.html">Forgot password?</a>
+        </div>
+
         <p id="form-message" class="form-message" aria-live="polite"></p>
-        <button type="submit" class="btn-primary">Sign In</button>
+
+        <button type="submit" class="auth-submit-btn">Sign In</button>
       </form>
 
-      <p class="auth-links">
-        <a href="/forgot-password.html">Forgot password?</a>
-      </p>
-      <p class="auth-links">
-        No account? <a href="/signup.html">Sign up</a>
-      </p>
+      <div class="auth-divider"><span>or</span></div>
+
+      <p class="auth-links">No account? <a href="/signup.html">Create one free</a></p>
     </div>
   </div>
 

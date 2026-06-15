@@ -3,35 +3,54 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign Up - Money Collection</title>
+  <title>Create Account — Money Collection</title>
+  <meta name="description" content="Create a free MoneyBox account to start tracking your collections.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    body { font-family: 'Inter', sans-serif; margin: 0; }
+  </style>
 </head>
 <body>
   <div class="auth-page">
     <div class="auth-card">
-      <h1>Create Account</h1>
-      <p class="subtitle">Sign up to save your collection</p>
 
+      <!-- Brand -->
+      <div class="auth-brand">
+        <div class="auth-brand-icon">💰</div>
+        <span class="auth-brand-name">MoneyBox</span>
+      </div>
+
+      <!-- Heading -->
+      <h1>Create account</h1>
+      <p class="subtitle">Start tracking your collections for free</p>
+
+      <!-- Form -->
       <form id="auth-form" class="auth-form" novalidate>
         <label>
-          Name
-          <input type="text" name="name" autocomplete="name" required>
+          Full name
+          <input type="text" name="name" placeholder="John Doe" autocomplete="name" required>
         </label>
+
         <label>
-          Email
-          <input type="email" name="email" autocomplete="email" required>
+          Email address
+          <input type="email" name="email" placeholder="you@example.com" autocomplete="email" required>
         </label>
+
         <label>
           Password
-          <input type="password" name="password" autocomplete="new-password" minlength="6" required>
+          <input type="password" name="password" placeholder="Min. 6 characters" autocomplete="new-password" minlength="6" required>
         </label>
+
         <p id="form-message" class="form-message" aria-live="polite"></p>
-        <button type="submit" class="btn-primary">Sign Up</button>
+
+        <button type="submit" class="auth-submit-btn">Create Account</button>
       </form>
 
-      <p class="auth-links">
-        Already have an account? <a href="/login.html">Sign in</a>
-      </p>
+      <div class="auth-divider"><span>or</span></div>
+
+      <p class="auth-links">Already have an account? <a href="/login.html">Sign in</a></p>
     </div>
   </div>
 
