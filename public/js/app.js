@@ -159,22 +159,34 @@ function isCellLocked(index) {
 }
 
 function clearCellStyle(cell) {
-  cell.classList.remove("selected", "cell-partial", "cell-locked");
+  cell.classList.remove("selected", "cell-partial", "cell-locked", "show-timer");
   cell.style.backgroundColor = "";
   cell.style.borderColor = "";
   cell.style.color = "";
   cell.setAttribute("aria-pressed", "false");
+  
+  const timerEl = cell.querySelector('.cell-timer-overlay');
+  if (timerEl) timerEl.remove();
+
   const index = cell.dataset.index;
   if (index !== undefined) {
-    cell.textContent = formatNumber(getValueAtIndex(config, Number(index)));
+    const valueEl = cell.querySelector('.cell-value');
+    if (valueEl) valueEl.textContent = formatNumber(getValueAtIndex(config, Number(index)));
+    else cell.innerHTML = `<span class="cell-value">${formatNumber(getValueAtIndex(config, Number(index)))}</span>`;
   }
 }
 
 function applyCellStyle(cell, index) {
+  let valueEl = cell.querySelector('.cell-value');
+  if (!valueEl) {
+    cell.innerHTML = `<span class="cell-value"></span>`;
+    valueEl = cell.querySelector('.cell-value');
+  }
+
   if (config.partial_payments && config.partial_payments[index]) {
     cell.classList.remove("selected");
     cell.classList.add("cell-partial");
-    cell.textContent = formatNumber(config.partial_payments[index]);
+    valueEl.textContent = formatNumber(config.partial_payments[index]);
     cell.style.backgroundColor = "";
     cell.style.borderColor = "";
     cell.style.color = "";
@@ -186,7 +198,7 @@ function applyCellStyle(cell, index) {
   const color = getColorForValue(value, config);
   cell.classList.remove("cell-partial");
   cell.classList.add("selected");
-  cell.textContent = formatNumber(value);
+  valueEl.textContent = formatNumber(value);
   cell.style.backgroundColor = color;
   cell.style.borderColor = color;
   cell.style.color = "#ffffff";
@@ -442,7 +454,7 @@ function rebuildGrid(currentConfig, selectedIndices) {
     const cell = document.createElement("button");
     cell.type = "button";
     cell.className = "cell";
-    cell.textContent = formatNumber(value);
+    cell.innerHTML = `<span class="cell-value">${formatNumber(value)}</span>`;
     cell.dataset.index = index;
     cell.setAttribute("role", "gridcell");
     cell.setAttribute("aria-pressed", "false");
@@ -772,7 +784,7 @@ lockSettingsForm.addEventListener("submit", async (event) => {
   
   const data = await saveState({
     selected: [...selected],
-    config: { lock_time_minutes: config.lock_time_minutes }
+    config: config
   });
 
   if (data) {
@@ -790,9 +802,25 @@ function closeModal(modal) {
   modal.classList.add("hidden");
 }
 
-openSettingsBtn.addEventListener("click", () => openModal(settingsModal));
-openColorSettingsBtn.addEventListener("click", () => openModal(colorSettingsModal));
-openLockSettingsBtn.addEventListener("click", () => openModal(lockSettingsModal));
+openSettingsBtn.addEventListener("click", () => {
+  if (selected.size > 0 || (config.partial_payments && Object.keys(config.partial_payments).length > 0)) {
+    alert("You cannot change collection settings while buttons are selected. Please clear all selections first.");
+    return;
+  }
+  openModal(settingsModal);
+});
+
+openColorSettingsBtn.addEventListener("click", () => {
+  if (selected.size > 0 || (config.partial_payments && Object.keys(config.partial_payments).length > 0)) {
+    alert("You cannot change color rules while buttons are selected. Please clear all selections first.");
+    return;
+  }
+  openModal(colorSettingsModal);
+});
+
+openLockSettingsBtn.addEventListener("click", () => {
+  openModal(lockSettingsModal);
+});
 
 closeModalBtns.forEach((btn) => {
   btn.addEventListener("click", (e) => {
@@ -818,6 +846,104 @@ async function initApp() {
   userNameEl.textContent = user.name;
   userEmailEl.textContent = user.email;
   await loadData();
+  startTimers();
+}
+
+function updateCellTimer(cell, index, remainingMs, isLocked, lockTimeMs = 1) {
+  let timerEl = cell.querySelector('.cell-timer-overlay');
+  
+  if (isLocked) {
+    if (timerEl) timerEl.remove();
+    cell.classList.remove("show-timer");
+    return;
+  }
+  
+  if (!timerEl) {
+    timerEl = document.createElement('div');
+    timerEl.className = 'cell-timer-overlay';
+    timerEl.innerHTML = `<span class="cell-timer-text"></span>`;
+    cell.appendChild(timerEl);
+    cell.classList.add("show-timer");
+  }
+
+  const textEl = timerEl.querySelector('.cell-timer-text');
+  
+  const totalSecs = Math.ceil(remainingMs / 1000);
+  const mins = Math.floor(totalSecs / 60).toString().padStart(2, '0');
+  const secs = (totalSecs % 60).toString().padStart(2, '0');
+  textEl.textContent = `${mins}:${secs}`;
+  
+  const progressPercent = Math.max(0, (remainingMs / lockTimeMs) * 100);
+  timerEl.style.setProperty('--progress', `${progressPercent}%`);
+}
+
+function startTimers() {
+  const globalTimerContainer = document.getElementById("global-lock-timer");
+  const globalTimerText = document.getElementById("global-lock-text");
+  const globalTimerIcon = document.getElementById("global-lock-icon");
+
+  setInterval(() => {
+    let maxRemainingMs = -1;
+    let anyLocked = false;
+    let anyActiveTimers = false;
+
+    if (!config.lock_time_minutes || config.lock_time_minutes <= 0) {
+       for (const index of selected) {
+         const cell = cellByIndex.get(index);
+         if (cell) updateCellTimer(cell, index, 0, true);
+       }
+       if (globalTimerContainer) globalTimerContainer.classList.add("hidden");
+       return;
+    }
+
+    const lockTimeMs = config.lock_time_minutes * 60000;
+    const now = Date.now();
+
+    for (const index of selected) {
+      if (!config.selected_timestamps || !config.selected_timestamps[index]) continue;
+      
+      const elapsedMs = now - config.selected_timestamps[index];
+      const remainingMs = lockTimeMs - elapsedMs;
+      const cell = cellByIndex.get(index);
+
+      if (remainingMs <= 0) {
+        anyLocked = true;
+        if (cell) {
+          updateCellTimer(cell, index, 0, true);
+          if (!cell.classList.contains("cell-locked")) cell.classList.add("cell-locked");
+        }
+      } else {
+        anyActiveTimers = true;
+        if (remainingMs > maxRemainingMs) {
+          maxRemainingMs = remainingMs;
+        }
+        if (cell) updateCellTimer(cell, index, remainingMs, false, lockTimeMs);
+      }
+    }
+
+    // Update Global Timer
+    if (globalTimerContainer && globalTimerText && globalTimerIcon) {
+      if (selected.size === 0 || (!anyLocked && !anyActiveTimers)) {
+        globalTimerContainer.classList.add("hidden");
+      } else {
+        globalTimerContainer.classList.remove("hidden");
+        if (anyActiveTimers && maxRemainingMs > 0) {
+          const totalSecs = Math.ceil(maxRemainingMs / 1000);
+          const mins = Math.floor(totalSecs / 60).toString().padStart(2, '0');
+          const secs = (totalSecs % 60).toString().padStart(2, '0');
+          globalTimerText.textContent = `${mins}:${secs}`;
+          globalTimerIcon.textContent = "⏱️";
+          globalTimerContainer.style.background = "rgba(239, 68, 68, 0.1)";
+          globalTimerContainer.style.color = "#fca5a5";
+        } else if (anyLocked) {
+          globalTimerText.textContent = "Locked";
+          globalTimerIcon.textContent = "🔒";
+          globalTimerContainer.style.background = "rgba(107, 114, 128, 0.2)";
+          globalTimerContainer.style.color = "#9ca3af";
+        }
+      }
+    }
+  }, 100);
 }
 
 initApp();

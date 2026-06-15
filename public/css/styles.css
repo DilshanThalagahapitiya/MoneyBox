@@ -321,6 +321,38 @@ h1 {
   aspect-ratio: 1 / 1;
 }
 
+.cell-value {
+  position: relative;
+  z-index: 2;
+  transition: opacity 0.2s;
+}
+
+.cell-timer-overlay {
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(rgba(0,0,0,0.4) var(--progress, 100%), transparent 0);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.cell-timer-text {
+  font-size: clamp(0.4rem, 1.8vw, 0.6rem);
+  font-weight: 700;
+  color: #fff;
+  z-index: 3;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.cell.show-timer .cell-value {
+  opacity: 0.15;
+}
+
 .cell-partial {
   background: repeating-linear-gradient(
     45deg,
@@ -372,6 +404,7 @@ h1 {
   align-items: center;
   justify-content: center;
   border: 1px solid white;
+  z-index: 4;
 }
 
 .grid-footer {

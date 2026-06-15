@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="/css/styles.css">
   <style>
     .admin-container {
-      max-width: 900px;
+      max-width: 1200px;
       margin: 2rem auto;
       padding: 0 1rem;
     }
@@ -30,7 +30,7 @@
       backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 16px;
-      overflow: hidden;
+      overflow-x: auto;
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
 
@@ -143,6 +143,35 @@
     </div>
   </div>
 
+  <!-- Edit User Modal -->
+  <div id="edit-modal" class="modal-overlay hidden">
+    <div class="modal glass-modal">
+      <div class="modal-header">
+        <h2>Edit User</h2>
+        <button type="button" class="close-modal-btn">&times;</button>
+      </div>
+      <form id="edit-form" class="settings-form">
+        <input type="hidden" id="edit-user-id">
+        <label>
+          Name
+          <input type="text" id="edit-name" required>
+        </label>
+        <label>
+          Role
+          <select id="edit-role" style="padding:0.75rem; border-radius:var(--radius-md); background:rgba(255,255,255,0.06); color:var(--text); border:1px solid rgba(255,255,255,0.12); width:100%;">
+            <option value="0" style="color:#000;">User</option>
+            <option value="1" style="color:#000;">Admin</option>
+          </select>
+        </label>
+        <label style="grid-column: 1 / -1;">
+          New Password (leave blank to keep current)
+          <input type="password" id="edit-password" minlength="6">
+        </label>
+        <button type="submit" class="settings-submit">Save Changes</button>
+      </form>
+    </div>
+  </div>
+
   <script src="/js/auth.js"></script>
   <script>
     async function loadUsers() {
@@ -174,8 +203,10 @@
         data.users.forEach(u => {
           const tr = document.createElement("tr");
           
-          let actionBtns = "";
+          let actionBtns = `<button class="action-btn" style="background:rgba(59,130,246,0.15); border-color:rgba(59,130,246,0.4); color:#93c5fd;" onclick="editUser(${u.id}, '${u.name.replace(/'/g, "\\'")}', ${u.is_admin})">Edit</button>`;
+          
           if (u.id !== user.id) {
+            actionBtns += `<button class="action-btn block" onclick="deleteUser(${u.id})">Delete</button>`;
             if (u.status === "pending") {
               actionBtns += `<button class="action-btn approve" onclick="updateStatus(${u.id}, 'approved')">Approve</button>`;
             } else if (u.status === "approved") {
@@ -223,6 +254,47 @@
         alert(err.message);
       }
     }
+
+    async function deleteUser(userId) {
+      if (!confirm(`Are you sure you want to permanently delete user ${userId}? This action cannot be undone.`)) return;
+      try {
+        const res = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
+        if (!res.ok) throw new Error((await res.json()).error || "Delete failed");
+        loadUsers();
+      } catch (err) { alert(err.message); }
+    }
+
+    const editModal = document.getElementById("edit-modal");
+    document.querySelector("#edit-modal .close-modal-btn").addEventListener("click", () => editModal.classList.add("hidden"));
+
+    function editUser(id, name, isAdmin) {
+      document.getElementById("edit-user-id").value = id;
+      document.getElementById("edit-name").value = name;
+      document.getElementById("edit-role").value = isAdmin ? "1" : "0";
+      document.getElementById("edit-password").value = "";
+      editModal.classList.remove("hidden");
+    }
+
+    document.getElementById("edit-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = document.getElementById("edit-user-id").value;
+      const payload = {
+        name: document.getElementById("edit-name").value,
+        is_admin: document.getElementById("edit-role").value,
+        password: document.getElementById("edit-password").value
+      };
+      
+      try {
+        const res = await fetch(`/api/admin/users/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error((await res.json()).error || "Update failed");
+        editModal.classList.add("hidden");
+        loadUsers();
+      } catch (err) { alert(err.message); }
+    });
 
     document.getElementById("logout-btn").addEventListener("click", async () => {
       await fetch("/api/auth/logout", { method: "POST" });

@@ -167,6 +167,25 @@ def update_user_status(user_id: int, status: str) -> None:
     with get_connection() as connection:
         connection.execute("UPDATE users SET status = ? WHERE id = ?", (status, user_id))
 
+def delete_user(user_id: int) -> None:
+    with get_connection() as connection:
+        connection.execute("DELETE FROM password_reset_tokens WHERE user_id = ?", (user_id,))
+        connection.execute("DELETE FROM collection_selections WHERE user_id = ?", (user_id,))
+        connection.execute("DELETE FROM users WHERE id = ?", (user_id,))
+
+def update_user_details(user_id: int, name: str, is_admin: int, password_hash: str = None) -> None:
+    with get_connection() as connection:
+        if password_hash:
+            connection.execute(
+                "UPDATE users SET name = ?, is_admin = ?, password_hash = ? WHERE id = ?",
+                (name.strip(), is_admin, password_hash, user_id),
+            )
+        else:
+            connection.execute(
+                "UPDATE users SET name = ?, is_admin = ? WHERE id = ?",
+                (name.strip(), is_admin, user_id),
+            )
+
 
 def update_user_password(user_id: int, password_hash: str) -> None:
     with get_connection() as connection:

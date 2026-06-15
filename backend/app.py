@@ -16,6 +16,8 @@ from backend.database import (
     init_db,
     get_all_users,
     update_user_status,
+    delete_user,
+    update_user_details,
     save_collection_state,
     update_user_password,
 )
@@ -203,6 +205,33 @@ def create_app() -> Flask:
             
         update_user_status(user_id, status)
         return jsonify({"ok": True, "message": f"User status updated to {status}"})
+
+    @app.delete("/api/admin/users/<int:user_id>")
+    def admin_delete_user(user_id):
+        user, err = login_required()
+        if err: return err
+        if not user.get("is_admin"): return jsonify({"error": "Forbidden"}), 403
+        if user_id == user["id"]: return jsonify({"error": "Cannot delete yourself"}), 400
+        delete_user(user_id)
+        return jsonify({"ok": True, "message": "User deleted"})
+
+    @app.put("/api/admin/users/<int:user_id>")
+    def admin_update_user(user_id):
+        user, err = login_required()
+        if err: return err
+        if not user.get("is_admin"): return jsonify({"error": "Forbidden"}), 403
+        
+        payload = request.get_json(silent=True) or {}
+        name = (payload.get("name") or "").strip()
+        is_admin = int(payload.get("is_admin", 0))
+        password = payload.get("password") or ""
+        
+        if not name: return jsonify({"error": "Name is required"}), 400
+        
+        password_hash = generate_password_hash(password, method=PASSWORD_HASH_METHOD) if password else None
+        update_user_details(user_id, name, is_admin, password_hash)
+        
+        return jsonify({"ok": True, "message": "User updated successfully"})
 
     def validate_color_rules(rules):
         if not isinstance(rules, list) or len(rules) < MIN_COLOR_RULES or len(rules) > MAX_COLOR_RULES:
