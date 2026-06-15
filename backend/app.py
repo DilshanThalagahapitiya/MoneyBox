@@ -78,6 +78,8 @@ def create_app() -> Flask:
             return jsonify({"error": "An account with this email already exists"}), 409
 
         user = create_user(name, email, generate_password_hash(password, method=PASSWORD_HASH_METHOD))
+        if profile_picture:
+            update_user_details(user["id"], name, 0, None, profile_picture)
         return jsonify({"ok": True, "message": "Account created. Please wait for admin approval."})
 
     @app.post("/api/auth/admin-signup")
@@ -86,6 +88,7 @@ def create_app() -> Flask:
         name = (payload.get("name") or "").strip()
         email = (payload.get("email") or "").strip().lower()
         password = payload.get("password") or ""
+        profile_picture = payload.get("profile_picture")
 
         if not name or not email or not password:
             return jsonify({"error": "Name, email, and password are required"}), 400
@@ -97,6 +100,8 @@ def create_app() -> Flask:
             return jsonify({"error": "An account with this email already exists"}), 409
 
         user = create_user(name, email, generate_password_hash(password, method=PASSWORD_HASH_METHOD), is_admin=1, status="approved")
+        if profile_picture:
+            update_user_details(user["id"], name, 1, None, profile_picture)
         session.clear()
         session["user_id"] = user["id"]
         return jsonify({"ok": True, "user": user})
@@ -131,6 +136,7 @@ def create_app() -> Flask:
                     "created_at": user["created_at"],
                     "is_admin": user.get("is_admin", 0),
                     "status": user.get("status", "approved"),
+                    "profile_picture": user.get("profile_picture"),
                 },
             }
         )
@@ -225,13 +231,35 @@ def create_app() -> Flask:
         name = (payload.get("name") or "").strip()
         is_admin = int(payload.get("is_admin", 0))
         password = payload.get("password") or ""
+        profile_picture = payload.get("profile_picture")
         
         if not name: return jsonify({"error": "Name is required"}), 400
         
         password_hash = generate_password_hash(password, method=PASSWORD_HASH_METHOD) if password else None
-        update_user_details(user_id, name, is_admin, password_hash)
+        
+        # If profile_picture wasn't included in payload (e.g., standard edit), we preserve existing
+        if "profile_picture" not in payload:
+            target_user = get_user_by_id(user_id)
+            if target_user:
+                profile_picture = target_user.get("profile_picture")
+                
+        update_user_details(user_id, name, is_admin, password_hash, profile_picture)
         
         return jsonify({"ok": True, "message": "User updated successfully"})
+
+    @app.put("/api/user/profile-picture")
+    def update_own_profile_picture():
+        user, err = login_required()
+        if err: return err
+        
+        payload = request.get_json(silent=True) or {}
+        profile_picture = payload.get("profile_picture")
+        
+        if not profile_picture:
+            return jsonify({"error": "No profile picture provided"}), 400
+            
+        update_user_details(user["id"], user["name"], user["is_admin"], None, profile_picture)
+        return jsonify({"ok": True, "message": "Profile picture updated"})
 
     def validate_color_rules(rules):
         if not isinstance(rules, list) or len(rules) < MIN_COLOR_RULES or len(rules) > MAX_COLOR_RULES:

@@ -88,6 +88,8 @@ def _migrate_users_table(connection: sqlite3.Connection) -> None:
         connection.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0")
     if "status" not in columns:
         connection.execute("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'approved'")
+    if "profile_picture" not in columns:
+        connection.execute("ALTER TABLE users ADD COLUMN profile_picture TEXT")
 
 
 def _migrate_collection_table(connection: sqlite3.Connection) -> None:
@@ -119,10 +121,10 @@ def create_user(name: str, email: str, password_hash: str, is_admin: int = 0, st
     with get_connection() as connection:
         cursor = connection.execute(
             """
-            INSERT INTO users (name, email, password_hash, created_at, is_admin, status)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO users (name, email, password_hash, created_at, is_admin, status, profile_picture)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (name.strip(), email.strip().lower(), password_hash, created_at, is_admin, status),
+            (name.strip(), email.strip().lower(), password_hash, created_at, is_admin, status, None),
         )
         user_id = cursor.lastrowid
         connection.execute(
@@ -144,7 +146,7 @@ def create_user(name: str, email: str, password_hash: str, is_admin: int = 0, st
 def get_user_by_id(user_id: int) -> Optional[dict]:
     with get_connection() as connection:
         row = connection.execute(
-            "SELECT id, name, email, created_at, is_admin, status FROM users WHERE id = ?",
+            "SELECT id, name, email, created_at, is_admin, status, profile_picture FROM users WHERE id = ?",
             (user_id,),
         ).fetchone()
         return dict(row) if row else None
@@ -153,14 +155,16 @@ def get_user_by_id(user_id: int) -> Optional[dict]:
 def get_user_by_email(email: str) -> Optional[dict]:
     with get_connection() as connection:
         row = connection.execute(
-            "SELECT id, name, email, password_hash, created_at, is_admin, status FROM users WHERE email = ?",
+            "SELECT id, name, email, password_hash, created_at, is_admin, status, profile_picture FROM users WHERE email = ?",
             (email.strip().lower(),),
         ).fetchone()
         return dict(row) if row else None
 
 def get_all_users() -> list:
     with get_connection() as connection:
-        rows = connection.execute("SELECT id, name, email, created_at, is_admin, status FROM users ORDER BY id DESC").fetchall()
+        rows = connection.execute(
+            "SELECT id, name, email, created_at, is_admin, status, profile_picture FROM users ORDER BY created_at DESC"
+        ).fetchall()
         return [dict(row) for row in rows]
 
 def update_user_status(user_id: int, status: str) -> None:
@@ -173,18 +177,22 @@ def delete_user(user_id: int) -> None:
         connection.execute("DELETE FROM collection_selections WHERE user_id = ?", (user_id,))
         connection.execute("DELETE FROM users WHERE id = ?", (user_id,))
 
-def update_user_details(user_id: int, name: str, is_admin: int, password_hash: str = None) -> None:
+def update_user_details(user_id: int, name: str, is_admin: int, password_hash: str = None, profile_picture: str = None) -> None:
     with get_connection() as connection:
-        if password_hash:
-            connection.execute(
-                "UPDATE users SET name = ?, is_admin = ?, password_hash = ? WHERE id = ?",
-                (name.strip(), is_admin, password_hash, user_id),
-            )
-        else:
-            connection.execute(
-                "UPDATE users SET name = ?, is_admin = ? WHERE id = ?",
-                (name.strip(), is_admin, user_id),
-            )
+        updates = ["name = ?", "is_admin = ?"]
+        params = [name.strip(), is_admin]
+
+        if password_hash is not None:
+            updates.append("password_hash = ?")
+            params.append(password_hash)
+
+        if profile_picture is not None:
+            updates.append("profile_picture = ?")
+            params.append(profile_picture)
+
+        params.append(user_id)
+        query = f"UPDATE users SET {', '.join(updates)} WHERE id = ?"
+        connection.execute(query, params)
 
 
 def update_user_password(user_id: int, password_hash: str) -> None:

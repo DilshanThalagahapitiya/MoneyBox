@@ -34,6 +34,11 @@
         </label>
 
         <label>
+          Profile Picture (Optional)
+          <input type="file" id="profile-pic-input" accept="image/*" style="font-size:0.85rem; padding:0.5rem; background: rgba(255,255,255,0.05); border-radius: var(--radius-sm);">
+        </label>
+
+        <label>
           Email address
           <input type="email" name="email" placeholder="you@example.com" autocomplete="email" required>
         </label>
@@ -57,14 +62,27 @@
   <script src="/js/auth.js"></script>
   <script>
     redirectIfAuthenticated();
+    let uploadedProfilePicture = null;
+    const fileInput = document.getElementById("profile-pic-input");
+    if (fileInput) {
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => { uploadedProfilePicture = e.target.result; };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+
     setupAuthForm({
       formId: "auth-form",
       submitUrl: "/api/auth/signup",
-      successRedirect: "/",
       getPayload: (formData) => ({
         name: formData.get("name"),
         email: formData.get("email"),
         password: formData.get("password"),
+        profile_picture: uploadedProfilePicture,
       }),
     });
   </script>

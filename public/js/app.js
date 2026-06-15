@@ -845,6 +845,47 @@ async function initApp() {
 
   userNameEl.textContent = user.name;
   userEmailEl.textContent = user.email;
+  
+  const avatarEl = document.getElementById("user-avatar-initials");
+  if (user.profile_picture) {
+    avatarEl.style.backgroundImage = `url(${user.profile_picture})`;
+    avatarEl.style.backgroundSize = "cover";
+    avatarEl.style.backgroundPosition = "center";
+    avatarEl.textContent = "";
+  } else {
+    const initials = user.name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
+    avatarEl.textContent = initials;
+  }
+
+  const picInput = document.getElementById("main-profile-pic-input");
+  if (avatarEl && picInput) {
+    avatarEl.addEventListener("click", () => picInput.click());
+    picInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+          const base64 = ev.target.result;
+          avatarEl.style.backgroundImage = `url(${base64})`;
+          avatarEl.style.backgroundSize = "cover";
+          avatarEl.style.backgroundPosition = "center";
+          avatarEl.textContent = "";
+          
+          try {
+            await fetch("/api/user/profile-picture", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ profile_picture: base64 })
+            });
+          } catch (err) {
+            console.error("Failed to update profile picture", err);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
   await loadData();
   startTimers();
 }

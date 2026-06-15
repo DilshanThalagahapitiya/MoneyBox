@@ -157,6 +157,10 @@
           <input type="text" id="edit-name" required>
         </label>
         <label>
+          Profile Picture (Optional)
+          <input type="file" id="edit-profile-pic" accept="image/*" style="font-size:0.85rem; padding:0.5rem; background: rgba(255,255,255,0.05); border-radius: var(--radius-sm); width: 100%;">
+        </label>
+        <label>
           Role
           <select id="edit-role" style="padding:0.75rem; border-radius:var(--radius-md); background:rgba(255,255,255,0.06); color:var(--text); border:1px solid rgba(255,255,255,0.12); width:100%;">
             <option value="0" style="color:#000;">User</option>
@@ -216,9 +220,16 @@
             }
           }
 
+          const avatarHTML = u.profile_picture 
+            ? `<div style="width: 32px; height: 32px; border-radius: 50%; background-image: url(${u.profile_picture}); background-size: cover; background-position: center;"></div>`
+            : `<div style="width: 32px; height: 32px; border-radius: 50%; background: var(--surface-light); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.8rem;">${u.name.substring(0,2).toUpperCase()}</div>`;
+
           tr.innerHTML = `
             <td>${u.id}</td>
-            <td style="font-weight: 600;">${u.name}</td>
+            <td style="display: flex; align-items: center; gap: 0.75rem; font-weight: 600;">
+              ${avatarHTML}
+              ${u.name}
+            </td>
             <td style="color: var(--text-muted);">${u.email}</td>
             <td>${u.is_admin ? "Admin" : "User"}</td>
             <td><span class="badge ${u.status}">${u.status}</span></td>
@@ -267,11 +278,26 @@
     const editModal = document.getElementById("edit-modal");
     document.querySelector("#edit-modal .close-modal-btn").addEventListener("click", () => editModal.classList.add("hidden"));
 
+    let editProfilePicBase64 = null;
+    const editPicInput = document.getElementById("edit-profile-pic");
+    editPicInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => { editProfilePicBase64 = ev.target.result; };
+        reader.readAsDataURL(file);
+      } else {
+        editProfilePicBase64 = null;
+      }
+    });
+
     function editUser(id, name, isAdmin) {
       document.getElementById("edit-user-id").value = id;
       document.getElementById("edit-name").value = name;
       document.getElementById("edit-role").value = isAdmin ? "1" : "0";
       document.getElementById("edit-password").value = "";
+      editPicInput.value = "";
+      editProfilePicBase64 = null;
       editModal.classList.remove("hidden");
     }
 
@@ -283,6 +309,9 @@
         is_admin: document.getElementById("edit-role").value,
         password: document.getElementById("edit-password").value
       };
+      if (editProfilePicBase64) {
+        payload.profile_picture = editProfilePicBase64;
+      }
       
       try {
         const res = await fetch(`/api/admin/users/${id}`, {
