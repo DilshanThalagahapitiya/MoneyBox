@@ -41,6 +41,9 @@ function setupAuthForm({
     const formData = new FormData(form);
     const payload = getPayload(formData);
 
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.classList.add("loading");
+
     try {
       const response = await fetch(submitUrl, {
         method: "POST",
@@ -52,23 +55,18 @@ function setupAuthForm({
 
       if (!response.ok) {
         setFormMessage(data.error || "Request failed", true);
-        return;
-      }
-
-      if (onSuccess) {
+      } else if (onSuccess) {
         onSuccess(data, setFormMessage);
-        return;
-      }
-
-      setFormMessage(successMessage || "Success", false);
-
-      if (successRedirect) {
-        window.setTimeout(() => {
+      } else if (successRedirect) {
+        setFormMessage(successMessage || "Success!");
+        setTimeout(() => {
           window.location.href = successRedirect;
-        }, 700);
+        }, 1000);
       }
     } catch (error) {
-      setFormMessage("Network error. Try again.", true);
+      setFormMessage("Network error occurred. Please try again.", true);
+    } finally {
+      if (submitBtn) submitBtn.classList.remove("loading");
     }
   });
 }

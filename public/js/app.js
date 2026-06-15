@@ -758,39 +758,62 @@ colorRulesList.addEventListener("input", (event) => {
 settingsForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  const data = await saveState({
-    selected: [...selected],
-    config: getCollectionConfigForSave(),
-  });
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.classList.add("loading");
 
-  if (data) {
-    applyCollectionConfig(data);
-    refreshSelectedCellColors();
-    closeModal(settingsModal);
+  try {
+    const data = await saveState({
+      selected: [...selected],
+      config: readConfigFromForm(),
+    });
+
+    if (data) {
+      applyCollectionConfig(data);
+      refreshSelectedCellColors();
+      closeModal(settingsModal);
+    }
+  } finally {
+    if (submitBtn) submitBtn.classList.remove("loading");
   }
 });
 
 colorSettingsForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const success = await saveColorRules();
-  if (success) {
-    closeModal(colorSettingsModal);
+  
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.classList.add("loading");
+
+  try {
+    const success = await saveColorRules();
+    if (success) {
+      closeModal(colorSettingsModal);
+    }
+  } finally {
+    if (submitBtn) submitBtn.classList.remove("loading");
   }
 });
 
 lockSettingsForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  config.lock_time_minutes = parseInt(lockTimeMinutesInput.value, 10);
   
-  const data = await saveState({
-    selected: [...selected],
-    config: config
-  });
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.classList.add("loading");
 
-  if (data) {
-    applyCollectionConfig(data);
-    refreshSelectedCellColors();
-    closeModal(lockSettingsModal);
+  try {
+    config.lock_time_minutes = parseInt(lockTimeMinutesInput.value, 10);
+    
+    const data = await saveState({
+      selected: [...selected],
+      config: config
+    });
+
+    if (data) {
+      applyCollectionConfig(data);
+      refreshSelectedCellColors();
+      closeModal(lockSettingsModal);
+    }
+  } finally {
+    if (submitBtn) submitBtn.classList.remove("loading");
   }
 });
 
@@ -866,19 +889,24 @@ async function initApp() {
         const reader = new FileReader();
         reader.onload = async (ev) => {
           const base64 = ev.target.result;
-          avatarEl.style.backgroundImage = `url(${base64})`;
-          avatarEl.style.backgroundSize = "cover";
-          avatarEl.style.backgroundPosition = "center";
-          avatarEl.textContent = "";
           
+          avatarEl.classList.add("loading");
           try {
             await fetch("/api/user/profile-picture", {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ profile_picture: base64 })
             });
+            
+            avatarEl.style.backgroundImage = `url(${base64})`;
+            avatarEl.style.backgroundSize = "cover";
+            avatarEl.style.backgroundPosition = "center";
+            avatarEl.textContent = "";
           } catch (err) {
             console.error("Failed to update profile picture", err);
+            alert("Failed to upload profile picture");
+          } finally {
+            avatarEl.classList.remove("loading");
           }
         };
         reader.readAsDataURL(file);
