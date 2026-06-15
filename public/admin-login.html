@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — Money Collection</title>
+  <meta name="description" content="Sign in to access your Money Collection dashboard.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    body { font-family: 'Inter', sans-serif; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card">
+
+      <!-- Brand -->
+      <div class="auth-brand">
+        <div class="auth-brand-icon">💰</div>
+        <span class="auth-brand-name">MoneyBox</span>
+      </div>
+
+      <!-- Heading -->
+      <h1>Admin login</h1>
+      <p class="subtitle">Sign in to manage users and access the dashboard</p>
+
+      <!-- Form -->
+      <form id="auth-form" class="auth-form" novalidate>
+        <label>
+          Email address
+          <input type="email" name="email" placeholder="you@example.com" autocomplete="email" required>
+        </label>
+
+        <label>
+          Password
+          <input type="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
+        </label>
+
+        <div class="auth-forgot-link">
+          <a href="/forgot-password.html">Forgot password?</a>
+        </div>
+
+        <p id="form-message" class="form-message" aria-live="polite"></p>
+
+        <button type="submit" class="auth-submit-btn">Sign In</button>
+      </form>
+
+      <div class="auth-divider"><span>or</span></div>
+
+      <p class="auth-links">No admin account? <a href="/admin-signup.html">Create one</a></p>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    setupAuthForm({
+      formId: "auth-form",
+      submitUrl: "/api/auth/login",
+      successRedirect: "/admin.html",
+      getPayload: (formData) => ({
+        email: formData.get("email"),
+        password: formData.get("password"),
+      }),
+    });
+  </script>
+</body>
+</html>

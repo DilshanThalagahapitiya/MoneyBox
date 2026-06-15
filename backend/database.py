@@ -80,6 +80,14 @@ def init_db() -> None:
             """
         )
         _migrate_collection_table(connection)
+        _migrate_users_table(connection)
+
+def _migrate_users_table(connection: sqlite3.Connection) -> None:
+    columns = {row["name"] for row in connection.execute("PRAGMA table_info(users)").fetchall()}
+    if "is_admin" not in columns:
+        connection.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0")
+    if "status" not in columns:
+        connection.execute("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'approved'")
 
 
 def _migrate_collection_table(connection: sqlite3.Connection) -> None:
@@ -105,16 +113,16 @@ def _migrate_collection_table(connection: sqlite3.Connection) -> None:
         )
 
 
-def create_user(name: str, email: str, password_hash: str) -> dict:
+def create_user(name: str, email: str, password_hash: str, is_admin: int = 0, status: str = "pending") -> dict:
     created_at = _utc_now()
 
     with get_connection() as connection:
         cursor = connection.execute(
             """
-            INSERT INTO users (name, email, password_hash, created_at)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO users (name, email, password_hash, created_at, is_admin, status)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (name.strip(), email.strip().lower(), password_hash, created_at),
+            (name.strip(), email.strip().lower(), password_hash, created_at, is_admin, status),
         )
         user_id = cursor.lastrowid
         connection.execute(
@@ -136,7 +144,7 @@ def create_user(name: str, email: str, password_hash: str) -> dict:
 def get_user_by_id(user_id: int) -> Optional[dict]:
     with get_connection() as connection:
         row = connection.execute(
-            "SELECT id, name, email, created_at FROM users WHERE id = ?",
+            "SELECT id, name, email, created_at, is_admin, status FROM users WHERE id = ?",
             (user_id,),
         ).fetchone()
         return dict(row) if row else None
@@ -145,10 +153,19 @@ def get_user_by_id(user_id: int) -> Optional[dict]:
 def get_user_by_email(email: str) -> Optional[dict]:
     with get_connection() as connection:
         row = connection.execute(
-            "SELECT id, name, email, password_hash, created_at FROM users WHERE email = ?",
+            "SELECT id, name, email, password_hash, created_at, is_admin, status FROM users WHERE email = ?",
             (email.strip().lower(),),
         ).fetchone()
         return dict(row) if row else None
+
+def get_all_users() -> list:
+    with get_connection() as connection:
+        rows = connection.execute("SELECT id, name, email, created_at, is_admin, status FROM users ORDER BY id DESC").fetchall()
+        return [dict(row) for row in rows]
+
+def update_user_status(user_id: int, status: str) -> None:
+    with get_connection() as connection:
+        connection.execute("UPDATE users SET status = ? WHERE id = ?", (status, user_id))
 
 
 def update_user_password(user_id: int, password_hash: str) -> None:

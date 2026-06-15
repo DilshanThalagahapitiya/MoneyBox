@@ -14,7 +14,8 @@ from backend.database import (
     get_user_by_id,
     get_valid_reset_token,
     init_db,
-    mark_reset_token_used,
+    get_all_users,
+    update_user_status,
     save_collection_state,
     update_user_password,
 )
@@ -75,6 +76,25 @@ def create_app() -> Flask:
             return jsonify({"error": "An account with this email already exists"}), 409
 
         user = create_user(name, email, generate_password_hash(password, method=PASSWORD_HASH_METHOD))
+        return jsonify({"ok": True, "message": "Account created. Please wait for admin approval."})
+
+    @app.post("/api/auth/admin-signup")
+    def auth_admin_signup():
+        payload = request.get_json(silent=True) or {}
+        name = (payload.get("name") or "").strip()
+        email = (payload.get("email") or "").strip().lower()
+        password = payload.get("password") or ""
+
+        if not name or not email or not password:
+            return jsonify({"error": "Name, email, and password are required"}), 400
+
+        if len(password) < 6:
+            return jsonify({"error": "Password must be at least 6 characters"}), 400
+
+        if get_user_by_email(email):
+            return jsonify({"error": "An account with this email already exists"}), 409
+
+        user = create_user(name, email, generate_password_hash(password, method=PASSWORD_HASH_METHOD), is_admin=1, status="approved")
         session.clear()
         session["user_id"] = user["id"]
         return jsonify({"ok": True, "user": user})
@@ -92,6 +112,11 @@ def create_app() -> Flask:
         if not user or not check_password_hash(user["password_hash"], password):
             return jsonify({"error": "Invalid email or password"}), 401
 
+        if user.get("status") == "pending":
+            return jsonify({"error": "Account pending admin approval"}), 403
+        if user.get("status") == "blocked":
+            return jsonify({"error": "Account is blocked"}), 403
+
         session.clear()
         session["user_id"] = user["id"]
         return jsonify(
@@ -102,6 +127,8 @@ def create_app() -> Flask:
                     "name": user["name"],
                     "email": user["email"],
                     "created_at": user["created_at"],
+                    "is_admin": user.get("is_admin", 0),
+                    "status": user.get("status", "approved"),
                 },
             }
         )
@@ -153,6 +180,29 @@ def create_app() -> Flask:
         update_user_password(reset_token["user_id"], generate_password_hash(password, method=PASSWORD_HASH_METHOD))
         mark_reset_token_used(reset_token["id"])
         return jsonify({"ok": True, "message": "Password updated. You can sign in now."})
+
+    @app.get("/api/admin/users")
+    def admin_get_users():
+        user, err = login_required()
+        if err: return err
+        if not user.get("is_admin"):
+            return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"ok": True, "users": get_all_users()})
+
+    @app.post("/api/admin/users/<int:user_id>/status")
+    def admin_update_user_status(user_id):
+        user, err = login_required()
+        if err: return err
+        if not user.get("is_admin"):
+            return jsonify({"error": "Forbidden"}), 403
+            
+        payload = request.get_json(silent=True) or {}
+        status = payload.get("status")
+        if status not in ["approved", "pending", "blocked"]:
+            return jsonify({"error": "Invalid status"}), 400
+            
+        update_user_status(user_id, status)
+        return jsonify({"ok": True, "message": f"User status updated to {status}"})
 
     def validate_color_rules(rules):
         if not isinstance(rules, list) or len(rules) < MIN_COLOR_RULES or len(rules) > MAX_COLOR_RULES:
