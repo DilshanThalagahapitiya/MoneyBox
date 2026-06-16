@@ -178,7 +178,7 @@ def create_user(name: str, email: str, password_hash: str, is_admin: int = 0, st
 def get_user_by_id(user_id: int) -> Optional[dict]:
     with get_connection() as connection:
         row = connection.execute(
-            "SELECT id, name, email, created_at, is_admin, status, profile_picture FROM users WHERE id = ?",
+            "SELECT id, name, email, password_hash, created_at, is_admin, status, profile_picture FROM users WHERE id = ?",
             (user_id,),
         ).fetchone()
         return dict(row) if row else None
@@ -524,6 +524,30 @@ def import_full_database(data: dict) -> tuple[bool, str]:
             return False, f"Import failed: {str(e)}"
 
     return True, f"Successfully imported {len(users)} users and {len(selections)} selections."
+
+
+def clear_all_data(admin_user_id: int) -> None:
+    """Clear all user data (collections, tokens) but keep the requesting admin account.
+
+    The admin user's own collection_selections row is also cleared (reset to default),
+    but the admin user row itself and other admins' user rows are preserved.
+    """
+    with get_connection() as connection:
+        # Delete password reset tokens for all users except the admin
+        connection.execute(
+            "DELETE FROM password_reset_tokens WHERE user_id != ?",
+            (admin_user_id,),
+        )
+        # Reset collection selections for non-admin users
+        connection.execute(
+            "DELETE FROM collection_selections WHERE user_id != ?",
+            (admin_user_id,),
+        )
+        # Reset the admin's own collection selections to default
+        connection.execute(
+            "UPDATE collection_selections SET selected_json = '[]', config_json = ? WHERE user_id = ?",
+            (json.dumps(DEFAULT_CONFIG), admin_user_id),
+        )
 
 
 def save_collection_state(user_id: int, selected: list[int], config: dict) -> None:

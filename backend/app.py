@@ -23,6 +23,7 @@ from backend.database import (
     mark_reset_token_used,
     export_full_database,
     import_full_database,
+    clear_all_data,
 )
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -476,6 +477,28 @@ def create_app() -> Flask:
             return jsonify({"error": message}), 400
 
         return jsonify({"ok": True, "message": message})
+
+    @app.post("/api/admin/clear-data")
+    def admin_clear_data():
+        user, err = login_required()
+        if err: return err
+        if not user.get("is_admin"):
+            return jsonify({"error": "Forbidden"}), 403
+
+        payload = request.get_json(silent=True) or {}
+        password = payload.get("password", "")
+
+        if not password:
+            return jsonify({"error": "Password is required"}), 400
+
+        if not check_password_hash(user["password_hash"], password):
+            return jsonify({"error": "Invalid password"}), 403
+
+        try:
+            clear_all_data(user["id"])
+            return jsonify({"ok": True, "message": "All user data has been cleared. Only admin accounts remain."})
+        except Exception as e:
+            return jsonify({"error": f"Clear data failed: {str(e)}"}), 500
 
     @app.get("/<path:filename>")
     def public_files(filename):

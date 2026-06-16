@@ -40,6 +40,8 @@
     .btn-export:hover { background: rgba(16,185,129,0.25); }
     .btn-import { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.4); color: #a5b4fc; }
     .btn-import:hover { background: rgba(99,102,241,0.25); }
+    .btn-danger { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; }
+    .btn-danger:hover { background: rgba(239,68,68,0.25); }
     .file-input-hidden { display: none; }
     .global-loading-overlay { position: fixed; inset: 0; background: rgba(15,17,23,0.85); backdrop-filter: blur(8px); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 1.5rem; }
     .global-loading-overlay.hidden { display: none; }
@@ -57,6 +59,7 @@
       <div class="admin-header-actions">
         <button id="export-btn" type="button" class="action-btn btn-export">⬇ Export DB</button>
         <button id="import-btn" type="button" class="action-btn btn-import">⬆ Import DB</button>
+        <button id="clear-data-btn" type="button" class="action-btn btn-danger">🗑 Clear Data</button>
         <button id="logout-btn" type="button" class="btn-logout">Logout</button>
       </div>
     </div>
@@ -72,7 +75,7 @@
   <!-- Hidden file input for import -->
   <input type="file" id="import-file-input" class="file-input-hidden" accept=".json,application/json">
 
-  <!-- Global loading overlay for export/import -->
+  <!-- Global loading overlay for export/import/clear -->
   <div id="global-loading-overlay" class="global-loading-overlay hidden">
     <div class="spinner"></div>
     <span id="global-loading-text" class="loading-text">Processing...</span>
@@ -96,6 +99,7 @@
     const adminLoadingEl = document.getElementById("admin-loading");
     const globalLoadingOverlay = document.getElementById("global-loading-overlay");
     const globalLoadingText = document.getElementById("global-loading-text");
+    let _currentAdminUser = null;
 
     function showGlobalLoading(text) {
       globalLoadingText.textContent = text || "Processing...";
@@ -111,6 +115,7 @@
       try { const r = await fetch("/api/auth/me"); user = (await r.json()).user; } catch(e) {}
       if (!user) { window.location.href = "/admin-login.html"; return; }
       if (!user.is_admin) { window.location.href = "/login.html"; return; }
+      _currentAdminUser = user;
       try {
         const res = await fetch("/api/admin/users");
         if (!res.ok) { if (res.status===403) { await window.appAlert("Access Denied","You are not an admin."); window.location.href="/"; return; } throw new Error("Failed to fetch users"); }
@@ -197,7 +202,6 @@
       const file = e.target.files[0];
       if (!file) return;
 
-      // Validate file type
       if (!file.name.endsWith(".json") && file.type !== "application/json") {
         await window.appAlert("Import Error", "Please select a JSON file.");
         importFileInput.value = "";
@@ -237,6 +241,50 @@
         await window.appAlert("Import Error", err.message);
       } finally {
         importFileInput.value = "";
+        hideGlobalLoading();
+      }
+    });
+
+    // --- Clear Data ---
+    document.getElementById("clear-data-btn").addEventListener("click", async () => {
+      if (!_currentAdminUser) {
+        await window.appAlert("Error", "Could not identify current admin. Please refresh.");
+        return;
+      }
+
+      // Step 1: Warning alert with Export DB button + OK/Cancel
+      const step1Result = await window.appAlert(
+        "⚠️ Clear All Data",
+        "Are you sure to clear the database?\n\nYou can't undo this process.\nPlease make sure to export database before delete database.",
+        true
+      );
+      if (!step1Result) return;
+
+      // Step 2: Password verification — prompt for admin password
+      const password = await window.appPrompt(
+        "Confirm Password",
+        `Admin: ${_currentAdminUser.name}\n\nEnter your password to confirm clearing all data:`,
+        ""
+      );
+      if (!password) return;
+
+      // Step 3: Execute clear
+      showGlobalLoading("Clearing all data...");
+      try {
+        const res = await fetch("/api/admin/clear-data", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        });
+
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || "Clear failed");
+
+        await window.appAlert("Data Cleared", result.message);
+        await reload();
+      } catch (err) {
+        await window.appAlert("Clear Data Error", err.message);
+      } finally {
         hideGlobalLoading();
       }
     });
