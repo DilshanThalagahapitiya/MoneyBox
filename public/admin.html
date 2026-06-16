@@ -72,6 +72,7 @@
       let user = null;
       try { const r = await fetch("/api/auth/me"); user = (await r.json()).user; } catch(e) {}
       if (!user) { window.location.href = "/admin-login.html"; return; }
+      if (!user.is_admin) { window.location.href = "/login.html"; return; }
       try {
         const res = await fetch("/api/admin/users");
         if (!res.ok) { if (res.status===403) { await window.appAlert("Access Denied","You are not an admin."); window.location.href="/"; return; } throw new Error("Failed to fetch users"); }

@@ -17,7 +17,7 @@ DEFAULT_CONFIG = {
     "same_value": False,
     "selection_type": "index",
     "partial_payments": {},
-    "lock_time_minutes": 0,
+    "lock_time_minutes": 1,
     "selected_timestamps": {},
 }
 
@@ -81,6 +81,7 @@ def init_db() -> None:
         )
         _migrate_collection_table(connection)
         _migrate_users_table(connection)
+        _migrate_lock_time_default(connection)
 
 def _migrate_users_table(connection: sqlite3.Connection) -> None:
     columns = {row["name"] for row in connection.execute("PRAGMA table_info(users)").fetchall()}
@@ -90,6 +91,37 @@ def _migrate_users_table(connection: sqlite3.Connection) -> None:
         connection.execute("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'approved'")
     if "profile_picture" not in columns:
         connection.execute("ALTER TABLE users ADD COLUMN profile_picture TEXT")
+
+
+def _migrate_lock_time_default(connection: sqlite3.Connection) -> None:
+    """One-time migration: update existing users whose stored config has lock_time_minutes=0 to 1.
+
+    Uses a simple sentinel table to ensure it runs only once.
+    """
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY)"
+    )
+    already_run = connection.execute(
+        "SELECT 1 FROM _migrations WHERE name = 'lock_time_default'"
+    ).fetchone()
+    if already_run:
+        return
+
+    rows = connection.execute(
+        "SELECT user_id, config_json FROM collection_selections"
+    ).fetchall()
+    for row in rows:
+        config = json.loads(row["config_json"])
+        if isinstance(config, dict) and config.get("lock_time_minutes") in (0, None):
+            config["lock_time_minutes"] = 1
+            connection.execute(
+                "UPDATE collection_selections SET config_json = ? WHERE user_id = ?",
+                (json.dumps(config), row["user_id"]),
+            )
+
+    connection.execute(
+        "INSERT OR IGNORE INTO _migrations (name) VALUES ('lock_time_default')"
+    )
 
 
 def _migrate_collection_table(connection: sqlite3.Connection) -> None:
@@ -317,7 +349,7 @@ def _normalize_config(config: dict) -> dict:
         "selection_type": "index",
         "color_rules": _normalize_color_rules(merged.get("color_rules", DEFAULT_COLOR_RULES)),
         "partial_payments": partial_payments,
-        "lock_time_minutes": int(merged.get("lock_time_minutes", 0)),
+        "lock_time_minutes": int(merged.get("lock_time_minutes", 1)),
         "selected_timestamps": selected_timestamps,
     }
 

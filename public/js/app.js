@@ -16,6 +16,7 @@ const DEFAULT_CONFIG = {
   columns: 10,
   same_value: false,
   color_rules: DEFAULT_COLOR_RULES,
+  lock_time_minutes: 1,
 };
 
 const gridEl = document.getElementById("grid");

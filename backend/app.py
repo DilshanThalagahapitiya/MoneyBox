@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, jsonify, request, send_from_directory, session
+from flask import Flask, jsonify, request, send_from_directory
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from backend.database import (
@@ -28,17 +28,47 @@ PUBLIC_DIR = os.path.join(BASE_DIR, "public")
 PASSWORD_HASH_METHOD = "pbkdf2:sha256"
 HEX_COLOR_PATTERN = __import__("re").compile(r"^#[0-9A-Fa-f]{6}$")
 
+# Tab-scoped session store (in-memory, keyed by tab_id)
+# Each entry: { "user_id": int }
+_tab_sessions: dict[str, dict] = {}
+
+
+def _get_tab_id():
+    """Extract the tab ID from the incoming request header."""
+    return request.headers.get("X-Tab-Id", "")
+
+
+def _get_session():
+    """Get the session dict for the current tab, or return an empty dict."""
+    tab_id = _get_tab_id()
+    if not tab_id:
+        return {}
+    return _tab_sessions.get(tab_id, {})
+
+
+def _save_session(data: dict):
+    """Save session data for the current tab."""
+    tab_id = _get_tab_id()
+    if not tab_id:
+        return
+    _tab_sessions[tab_id] = data
+
+
+def _clear_session():
+    """Clear the session for the current tab."""
+    tab_id = _get_tab_id()
+    if tab_id:
+        _tab_sessions.pop(tab_id, None)
+
 
 def create_app() -> Flask:
     app = Flask(__name__, static_folder=None)
-    app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-in-production")
-    app.config["SESSION_COOKIE_HTTPONLY"] = True
-    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
     init_db()
 
     def current_user():
-        user_id = session.get("user_id")
+        sess = _get_session()
+        user_id = sess.get("user_id")
         if not user_id:
             return None
         return get_user_by_id(user_id)
@@ -52,8 +82,6 @@ def create_app() -> Flask:
     @app.get("/")
     def home():
         return send_from_directory(PUBLIC_DIR, "index.html")
-
-
 
     @app.get("/api/auth/me")
     def auth_me():
@@ -101,8 +129,8 @@ def create_app() -> Flask:
         user = create_user(name, email, generate_password_hash(password, method=PASSWORD_HASH_METHOD), is_admin=1, status="approved")
         if profile_picture:
             update_user_details(user["id"], name, 1, None, profile_picture)
-        session.clear()
-        session["user_id"] = user["id"]
+        _clear_session()
+        _save_session({"user_id": user["id"]})
         return jsonify({"ok": True, "user": user})
 
     @app.post("/api/auth/login")
@@ -123,8 +151,8 @@ def create_app() -> Flask:
         if user.get("status") == "blocked":
             return jsonify({"error": "Account is blocked"}), 403
 
-        session.clear()
-        session["user_id"] = user["id"]
+        _clear_session()
+        _save_session({"user_id": user["id"]})
         response = jsonify(
             {
                 "ok": True,
@@ -151,7 +179,7 @@ def create_app() -> Flask:
 
     @app.post("/api/auth/logout")
     def auth_logout():
-        session.clear()
+        _clear_session()
         return jsonify({"ok": True})
 
     @app.post("/api/auth/forgot-password")
@@ -211,12 +239,12 @@ def create_app() -> Flask:
         if err: return err
         if not user.get("is_admin"):
             return jsonify({"error": "Forbidden"}), 403
-            
+
         payload = request.get_json(silent=True) or {}
         status = payload.get("status")
         if status not in ["approved", "pending", "blocked"]:
             return jsonify({"error": "Invalid status"}), 400
-            
+
         update_user_status(user_id, status)
         return jsonify({"ok": True, "message": f"User status updated to {status}"})
 
@@ -234,35 +262,35 @@ def create_app() -> Flask:
         user, err = login_required()
         if err: return err
         if not user.get("is_admin"): return jsonify({"error": "Forbidden"}), 403
-        
+
         payload = request.get_json(silent=True) or {}
         name = (payload.get("name") or "").strip()
         is_admin = int(payload.get("is_admin", 0))
         password = payload.get("password") or ""
         profile_picture = payload.get("profile_picture")
-        
+
         if not name: return jsonify({"error": "Name is required"}), 400
-        
+
         password_hash = generate_password_hash(password, method=PASSWORD_HASH_METHOD) if password else None
-        
+
         # If profile_picture wasn't included in payload (e.g., standard edit), we preserve existing
         if "profile_picture" not in payload:
             target_user = get_user_by_id(user_id)
             if target_user:
                 profile_picture = target_user.get("profile_picture")
-                
+
         update_user_details(user_id, name, is_admin, password_hash, profile_picture)
-        
+
         return jsonify({"ok": True, "message": "User updated successfully"})
 
     @app.put("/api/user/profile-picture")
     def update_own_profile_picture():
         user, err = login_required()
         if err: return err
-        
+
         payload = request.get_json(silent=True) or {}
         profile_picture = payload.get("profile_picture")
-        
+
         update_user_details(user["id"], user["name"], user["is_admin"], None, profile_picture)
         return jsonify({"ok": True, "message": "Profile picture updated"})
 
@@ -305,7 +333,7 @@ def create_app() -> Flask:
             button_count = int(config.get("button_count", 100))
             columns = int(config.get("columns", 10))
             same_value = bool(config.get("same_value", False))
-            lock_time_minutes = int(config.get("lock_time_minutes", 0))
+            lock_time_minutes = int(config.get("lock_time_minutes", 1))
         except (TypeError, ValueError):
             return None, "Config values must be valid numbers"
 

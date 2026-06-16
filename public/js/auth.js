@@ -1,3 +1,35 @@
+// --- Tab-Scoped Session Management ---
+// Generate a unique tab ID that persists for the lifetime of this browser tab.
+// sessionStorage is automatically cleared when the tab is closed, and is
+// NOT shared between tabs — giving us natural tab isolation.
+(function() {
+  let tabId = sessionStorage.getItem("_mb_tab_id");
+  if (!tabId) {
+    tabId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    sessionStorage.setItem("_mb_tab_id", tabId);
+  }
+
+  // Override the global fetch to automatically attach the X-Tab-Id header
+  // to every request. This ensures ALL fetch calls across the app (including
+  // those in app.js, admin.html inline scripts, etc.) use the correct tab-scoped session.
+  const originalFetch = window.fetch;
+  window.fetch = function(input, init = {}) {
+    init = init || {};
+    init.headers = init.headers || {};
+    
+    // Handle Headers object vs plain object
+    if (init.headers instanceof Headers) {
+      if (!init.headers.has("X-Tab-Id")) {
+        init.headers.set("X-Tab-Id", tabId);
+      }
+    } else {
+      init.headers["X-Tab-Id"] = tabId;
+    }
+
+    return originalFetch.call(window, input, init);
+  };
+})();
+
 async function redirectIfAuthenticated() {
   try {
     const response = await fetch("/api/auth/me", { cache: "no-store" });

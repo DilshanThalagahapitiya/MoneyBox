@@ -55,6 +55,7 @@
 
   <script src="/js/auth.js"></script>
   <script>
+    (async()=>{try{const r=await fetch("/api/auth/me");const d=await r.json();if(d.authenticated){if(d.user.is_admin)window.location.href="/admin.html";else window.location.href="/";}}catch(e){}})();
     setupAuthForm({
       formId: "auth-form",
       submitUrl: "/api/auth/login",

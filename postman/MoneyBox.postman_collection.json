@@ -1,0 +1,783 @@
+{
+  "info": {
+    "name": "MoneyBox API",
+    "description": "Complete API collection for MoneyBox — a money collection tracking app with tab-scoped authentication isolation.\n\n## Tab Isolation Strategy\n\nThis app uses server-side sessions keyed by a unique tab identifier (`X-Tab-Id` header) instead of browser cookies. Each browser tab generates a unique ID stored in `sessionStorage` and sends it with every request via a global `fetch()` override.\n\n**Key concepts for testing:**\n- Each `X-Tab-Id` value represents an independent \"browser tab\"\n- Tab A and Tab B can be logged in as different users simultaneously\n- Logging out from one tab does NOT affect other tabs\n- Omitting the header equals a fresh, unauthenticated tab\n\n## Collection Structure\n\nThe collection is organised into folders:\n1. **🔐 Authentication** — Signup, Login, Logout, Session check\n2. **👤 Profile** — Profile picture management\n3. **📊 Collection** — Grid data, selections, partial payments\n4. **🎨 Color Rules** — Manage color ranges\n5. **⚙️ Settings** — Collection & lock settings\n6. **🛡️ Admin** — User management (admin only)\n7. **🔁 Tab Isolation Tests** — Multi-tab scenario tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "moneybox"
+  },
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Create User Account (Signup)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Account created successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.be.true;",
+                  "    pm.expect(jsonData.message).to.include('created');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tab-Id",
+                "value": "{{tab_a_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"{{user_name}}\",\n    \"email\": \"{{user_email}}\",\n    \"password\": \"{{user_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/signup",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "signup"]
+            },
+            "description": "Creates a new user account (requires admin approval before login)."
+          }
+        },
+        {
+          "name": "Create Admin Account (Admin Signup)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Admin account created and logged in\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.be.true;",
+                  "    pm.expect(jsonData.user).to.have.property('id');",
+                  "    pm.expect(jsonData.user.is_admin).to.equal(1);",
+                  "    pm.collectionVariables.set('admin_user_id', jsonData.user.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tab-Id",
+                "value": "{{tab_a_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"{{admin_name}}\",\n    \"email\": \"{{admin_email}}\",\n    \"password\": \"{{admin_password}}\",\n    \"profile_picture\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/admin-signup",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "admin-signup"]
+            },
+            "description": "Creates an admin account (auto-approved). Also logs in this tab automatically."
+          }
+        },
+        {
+          "name": "Check Session (Auth Me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Session info returned\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('authenticated');",
+                  "    if (jsonData.authenticated) {",
+                  "        pm.expect(jsonData.user).to.have.property('email');",
+                  "        pm.expect(jsonData.user).to.have.property('name');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tab-Id",
+                "value": "{{tab_a_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Returns the current user session or `{\"authenticated\": false}` if not logged in."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Login successful\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.be.true;",
+                  "    pm.expect(jsonData.user).to.have.property('id');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tab-Id",
+                "value": "{{tab_a_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{admin_email}}\",\n    \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Logs in with email & password. Session is scoped to this X-Tab-Id only."
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Logout successful\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test(\"Session cleared for this tab\", function () {",
+                  "    pm.sendRequest({",
+                  "        url: pm.variables.get('base_url') + '/api/auth/me',",
+                  "        method: 'GET',",
+                  "        header: { 'X-Tab-Id': pm.variables.get('tab_a_id') }",
+                  "    }, function (err, res) {",
+                  "        const json = res.json();",
+                  "        pm.expect(json.authenticated).to.be.false;",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tab-Id",
+                "value": "{{tab_a_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Clears the session for this tab only. Other tabs remain unaffected."
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{admin_email}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "forgot-password"]
+            },
+            "description": "Initiates password reset. The reset_url will be in the server console output."
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"token\": \"{{reset_password_token}}\",\n    \"password\": \"newPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/reset-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "reset-password"]
+            },
+            "description": "Resets password using a valid token from the forgot-password flow."
+          }
+        }
+      ],
+      "description": "Authentication endpoints with tab-scoped sessions. All requests use the X-Tab-Id header."
+    },
+    {
+      "name": "👤 Profile",
+      "item": [
+        {
+          "name": "Update Profile Picture",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tab-Id",
+                "value": "{{tab_a_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"profile_picture\": \"data:image/png;base64,...\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/user/profile-picture",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "profile-picture"]
+            },
+            "description": "Updates the authenticated user's profile picture (base64 encoded image). Send empty string to remove."
+          }
+        }
+      ],
+      "description": "Profile management endpoints."
+    },
+    {
+      "name": "📊 Collection",
+      "item": [
+        {
+          "name": "Get Collection Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tab-Id",
+                "value": "{{tab_a_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/data",
+              "host": ["{{base_url}}"],
+              "path": ["api", "data"]
+            },
+            "description": "Returns the user's collection state: selected indices, config, partial payments, timestamps."
+          }
+        },
+        {
+          "name": "Save Collection Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tab-Id",
+                "value": "{{tab_a_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"selected\": {{collection_selected_indices}},\n    \"config\": {\n        \"partial_payments\": {},\n        \"selected_timestamps\": {}\n    }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/data",
+              "host": ["{{base_url}}"],
+              "path": ["api", "data"]
+            },
+            "description": "Saves selected grid indices and config updates."
+          }
+        }
+      ],
+      "description": "Collection data management."
+    },
+    {
+      "name": "🎨 Color Rules",
+      "item": [
+        {
+          "name": "Save Color Rules",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tab-Id",
+                "value": "{{tab_a_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"color_rules\": [\n        { \"min_value\": 5000, \"color\": \"#dc2626\" },\n        { \"min_value\": 1000, \"color\": \"#16a34a\" },\n        { \"min_value\": 0, \"color\": \"#eab308\" }\n    ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/color-rules",
+              "host": ["{{base_url}}"],
+              "path": ["api", "color-rules"]
+            },
+            "description": "Saves color range rules. Must be 3-5 rules, sorted descending by min_value."
+          }
+        }
+      ],
+      "description": "Color ranges for grid buttons."
+    },
+    {
+      "name": "🛡️ Admin",
+      "item": [
+        {
+          "name": "Get All Users (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Users list returned\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.be.true;",
+                  "    pm.expect(jsonData.users).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tab-Id",
+                "value": "{{tab_a_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/users",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "users"]
+            },
+            "description": "Returns all users (admin only). Requires the current tab to be logged in as admin."
+          }
+        },
+        {
+          "name": "Update User Status (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tab-Id",
+                "value": "{{tab_a_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"approved\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/users/{{existing_user_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "users", "{{existing_user_id}}", "status"]
+            },
+            "description": "Changes user status: approved, pending, or blocked. Admin only."
+          }
+        },
+        {
+          "name": "Update User Details (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tab-Id",
+                "value": "{{tab_a_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Name\",\n    \"is_admin\": 0,\n    \"password\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/users/{{existing_user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "users", "{{existing_user_id}}"]
+            },
+            "description": "Updates user name, role, and optionally password. Admin only."
+          }
+        },
+        {
+          "name": "Delete User (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Tab-Id",
+                "value": "{{tab_a_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/users/{{existing_user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "users", "{{existing_user_id}}"]
+            },
+            "description": "Permanently deletes a user. Admin only, cannot delete yourself."
+          }
+        }
+      ],
+      "description": "Admin-only endpoints for user management."
+    },
+    {
+      "name": "🔁 Tab Isolation Tests",
+      "description": "End-to-end scenarios demonstrating that each X-Tab-Id maintains an independent session.",
+      "item": [
+        {
+          "name": "SCENARIO A: Two tabs, different users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('=== SCENARIO A: Two tabs, different users ===');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "item": [
+            {
+              "name": "1a. Tab A — Login as Admin",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Tab-Id", "value": "{{tab_a_id}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\": \"{{admin_email}}\", \"password\": \"{{admin_password}}\"}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "auth", "login"]
+                }
+              }
+            },
+            {
+              "name": "1b. Tab A — Verify Admin Session",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Tab A is admin\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.authenticated).to.be.true;",
+                      "    pm.expect(json.user.email).to.eql(pm.variables.get('admin_email'));",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "X-Tab-Id", "value": "{{tab_a_id}}" }],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/me",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "auth", "me"]
+                }
+              }
+            },
+            {
+              "name": "2a. Tab B — Login as Different User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Tab-Id", "value": "{{tab_b_id}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\": \"{{user_email}}\", \"password\": \"{{user_password}}\"}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "auth", "login"]
+                }
+              }
+            },
+            {
+              "name": "2b. Tab B — Verify Different User Session",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Tab B is the regular user (not admin)\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.authenticated).to.be.true;",
+                      "    pm.expect(json.user.email).to.eql(pm.variables.get('user_email'));",
+                      "    pm.expect(json.user.is_admin).to.equal(0);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "X-Tab-Id", "value": "{{tab_b_id}}" }],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/me",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "auth", "me"]
+                }
+              }
+            },
+            {
+              "name": "3. Verify Tab A is Still Admin (Not Affected)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Tab A unchanged — still admin\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.authenticated).to.be.true;",
+                      "    pm.expect(json.user.email).to.eql(pm.variables.get('admin_email'));",
+                      "    pm.expect(json.user.is_admin).to.equal(1);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "X-Tab-Id", "value": "{{tab_a_id}}" }],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/me",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "auth", "me"]
+                }
+              }
+            },
+            {
+              "name": "4. Anonymous Tab (No Header) — Unauthenticated",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"New tab is unauthenticated\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.authenticated).to.be.false;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/me",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "auth", "me"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "SCENARIO B: Logout isolation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('=== SCENARIO B: Logout isolation ===');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "item": [
+            {
+              "name": "1. Tab A Logout",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "X-Tab-Id", "value": "{{tab_a_id}}" }],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/logout",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "auth", "logout"]
+                }
+              }
+            },
+            {
+              "name": "2. Tab A Now Unauthenticated",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Tab A logged out\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.authenticated).to.be.false;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "X-Tab-Id", "value": "{{tab_a_id}}" }],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/me",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "auth", "me"]
+                }
+              }
+            },
+            {
+              "name": "3. Tab B Still Authenticated (Isolation Verified)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Tab B session intact after Tab A logout\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.authenticated).to.be.true;",
+                      "    pm.expect(json.user.email).to.eql(pm.variables.get('user_email'));",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "X-Tab-Id", "value": "{{tab_b_id}}" }],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/me",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "auth", "me"]
+                }
+              }
+            },
+            {
+              "name": "4. Tab A Can Login as Different User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Tab-Id", "value": "{{tab_a_id}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"email\": \"{{user_b_email}}\", \"password\": \"{{user_b_password}}\"}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/auth/login",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "auth", "login"]
+                }
+              }
+            },
+            {
+              "name": "5. Tab A Now Shows New User (Tab B Unchanged)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Tab A now logged in as different user\", function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.authenticated).to.be.true;",
+                      "    pm.expect(json.user.email).to.eql(pm.variables.get('user_b_email'));",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "X-Tab-Id", "value": "{{tab_a_id}}" }],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/me",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "auth", "me"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
