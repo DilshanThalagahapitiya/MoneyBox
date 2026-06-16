@@ -8,133 +8,31 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <style>
-    .admin-container {
-      max-width: 1200px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-    }
-    .admin-loading {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 4rem 2rem;
-      gap: 1rem;
-      color: var(--text-muted);
-    }
+    .admin-container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+    .admin-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; gap: 1rem; color: var(--text-muted); }
     .admin-loading.hidden { display: none; }
-    .admin-loading .spinner {
-      width: 36px; height: 36px;
-      border: 3px solid rgba(255,255,255,0.1);
-      border-top-color: var(--primary);
-      border-radius: 50%;
-      animation: spin 0.6s linear infinite;
-    }
+    .admin-loading .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.6s linear infinite; }
     .admin-table-wrap { position: relative; }
-    .admin-table-wrap .admin-loading {
-      position: absolute; inset: 0;
-      background: rgba(15,17,23,0.7);
-      backdrop-filter: blur(4px);
-      border-radius: 16px;
-      z-index: 10;
-    }
-    
-    .admin-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
-    }
-    
-    .admin-header h1 {
-      font-size: 1.8rem;
-    }
-
-    .table-card {
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      overflow-x: auto;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-    }
-
-    th, td {
-      padding: 1rem 1.25rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    th {
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: rgba(255, 255, 255, 0.5);
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    td {
-      font-size: 0.95rem;
-      vertical-align: middle;
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 0.3rem 0.6rem;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .badge.pending { background: rgba(234, 179, 8, 0.15); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.3); }
-    .badge.approved { background: rgba(34, 197, 94, 0.15); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.3); }
-    .badge.blocked { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
-
-    .action-btn {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: white;
-      padding: 0.4rem 0.8rem;
-      border-radius: 8px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .action-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
-    }
-
-    .action-btn.approve {
-      background: rgba(34, 197, 94, 0.15);
-      border-color: rgba(34, 197, 94, 0.4);
-      color: #86efac;
-    }
-    .action-btn.approve:hover { background: rgba(34, 197, 94, 0.25); }
-
-    .action-btn.block {
-      background: rgba(239, 68, 68, 0.15);
-      border-color: rgba(239, 68, 68, 0.4);
-      color: #fca5a5;
-    }
-    .action-btn.block:hover { background: rgba(239, 68, 68, 0.25); }
-    
-    .actions {
-      display: flex;
-      gap: 0.5rem;
-    }
+    .admin-table-wrap .admin-loading { position: absolute; inset: 0; background: rgba(15,17,23,0.7); backdrop-filter: blur(4px); border-radius: 16px; z-index: 10; }
+    .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    .admin-header h1 { font-size: 1.8rem; }
+    .table-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; overflow-x: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    th { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.02); }
+    td { font-size: 0.95rem; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    .badge { display: inline-block; padding: 0.3rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .badge.pending { background: rgba(234,179,8,0.15); color: #fde047; border: 1px solid rgba(234,179,8,0.3); }
+    .badge.approved { background: rgba(34,197,94,0.15); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+    .badge.blocked { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+    .action-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: white; padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .action-btn:hover { background: rgba(255,255,255,0.15); }
+    .action-btn.approve { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.4); color: #86efac; }
+    .action-btn.approve:hover { background: rgba(34,197,94,0.25); }
+    .action-btn.block { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #fca5a5; }
+    .action-btn.block:hover { background: rgba(239,68,68,0.25); }
+    .actions { display: flex; gap: 0.5rem; }
   </style>
 </head>
 <body>
@@ -144,239 +42,88 @@
         <h1>Admin Dashboard</h1>
         <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.2rem;">Manage users and access permissions</p>
       </div>
-      <div>
-        <button id="logout-btn" type="button" class="btn-logout">Logout</button>
-      </div>
+      <div><button id="logout-btn" type="button" class="btn-logout">Logout</button></div>
     </div>
-
     <div class="table-card admin-table-wrap">
-      <div id="admin-loading" class="admin-loading">
-        <div class="spinner"></div>
-        <span>Loading users...</span>
-      </div>
+      <div id="admin-loading" class="admin-loading"><div class="spinner"></div><span>Loading users...</span></div>
       <table id="users-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Populated by JS -->
-        </tbody>
+        <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
       </table>
     </div>
   </div>
-
-  <!-- Edit User Modal -->
   <div id="edit-modal" class="modal-overlay hidden">
     <div class="modal glass-modal">
-      <div class="modal-header">
-        <h2>Edit User</h2>
-        <button type="button" class="close-modal-btn">&times;</button>
-      </div>
+      <div class="modal-header"><h2>Edit User</h2><button type="button" class="close-modal-btn">&times;</button></div>
       <form id="edit-form" class="settings-form">
         <input type="hidden" id="edit-user-id">
-        <label>
-          Name
-          <input type="text" id="edit-name" required>
-        </label>
-        <label>
-          Profile Picture (Optional)
-          <input type="file" id="edit-profile-pic" accept="image/*" style="font-size:0.85rem; padding:0.5rem; background: rgba(255,255,255,0.05); border-radius: var(--radius-sm); width: 100%;">
-        </label>
-        <label>
-          Role
-          <select id="edit-role" style="padding:0.75rem; border-radius:var(--radius-md); background:rgba(255,255,255,0.06); color:var(--text); border:1px solid rgba(255,255,255,0.12); width:100%;">
-            <option value="0" style="color:#000;">User</option>
-            <option value="1" style="color:#000;">Admin</option>
-          </select>
-        </label>
-        <label style="grid-column: 1 / -1;">
-          New Password (leave blank to keep current)
-          <input type="password" id="edit-password" minlength="6">
-        </label>
+        <label>Name<input type="text" id="edit-name" required></label>
+        <label>Profile Picture (Optional)<input type="file" id="edit-profile-pic" accept="image/*" style="font-size:0.85rem; padding:0.5rem; background: rgba(255,255,255,0.05); border-radius: var(--radius-sm); width: 100%;"></label>
+        <label>Role<select id="edit-role" style="padding:0.75rem; border-radius:var(--radius-md); background:rgba(255,255,255,0.06); color:var(--text); border:1px solid rgba(255,255,255,0.12); width:100%;"><option value="0" style="color:#000;">User</option><option value="1" style="color:#000;">Admin</option></select></label>
+        <label style="grid-column: 1 / -1;">New Password (leave blank to keep current)<input type="password" id="edit-password" minlength="6"></label>
         <button type="submit" class="settings-submit">Save Changes</button>
       </form>
     </div>
   </div>
-
   <script src="/js/auth.js"></script>
   <script>
+    const adminLoadingEl = document.getElementById("admin-loading");
     async function loadUsers() {
       let user = null;
+      try { const r = await fetch("/api/auth/me"); user = (await r.json()).user; } catch(e) {}
+      if (!user) { window.location.href = "/admin-login.html"; return; }
       try {
-        const authRes = await fetch("/api/auth/me");
-        const authData = await authRes.json();
-        user = authData.user;
-      } catch(e) {}
-
-      if (!user) {
-        window.location.href = "/admin-login.html";
-        return;
-      }
-
-      try {
-        const response = await fetch("/api/admin/users");
-        if (!response.ok) {
-          if (response.status === 403) {
-            await window.appAlert("Access Denied", "You are not an admin.");
-            window.location.href = "/";
-            return;
-          }
-          throw new Error("Failed to fetch users");
-        }
-        const data = await response.json();
-        
+        const res = await fetch("/api/admin/users");
+        if (!res.ok) { if (res.status===403) { await window.appAlert("Access Denied","You are not an admin."); window.location.href="/"; return; } throw new Error("Failed to fetch users"); }
+        const data = await res.json();
         const tbody = document.querySelector("#users-table tbody");
         tbody.innerHTML = "";
-
         data.users.forEach(u => {
           const tr = document.createElement("tr");
-          
-          let actionBtns = `<button class="action-btn" style="background:rgba(59,130,246,0.15); border-color:rgba(59,130,246,0.4); color:#93c5fd;" onclick="editUser(${u.id}, '${u.name.replace(/'/g, "\\'")}', ${u.is_admin})">Edit</button>`;
-          
+          let btns = `<button class="action-btn" style="background:rgba(59,130,246,0.15);border-color:rgba(59,130,246,0.4);color:#93c5fd;" onclick="editUser(${u.id},'${u.name.replace(/'/g,"\\'")}',${u.is_admin})">Edit</button>`;
           if (u.id !== user.id) {
-            actionBtns += `<button class="action-btn block" onclick="deleteUser(${u.id})">Delete</button>`;
-            if (u.status === "pending") {
-              actionBtns += `<button class="action-btn approve" onclick="updateStatus(${u.id}, 'approved')">Approve</button>`;
-            } else if (u.status === "approved") {
-              actionBtns += `<button class="action-btn block" onclick="updateStatus(${u.id}, 'blocked')">Block</button>`;
-            } else if (u.status === "blocked") {
-              actionBtns += `<button class="action-btn approve" onclick="updateStatus(${u.id}, 'approved')">Unblock</button>`;
-            }
+            btns += `<button class="action-btn block" onclick="deleteUser(${u.id},this)">Delete</button>`;
+            if (u.status==="pending") btns += `<button class="action-btn approve" onclick="updateStatus(${u.id},'approved',this)">Approve</button>`;
+            else if (u.status==="approved") btns += `<button class="action-btn block" onclick="updateStatus(${u.id},'blocked',this)">Block</button>`;
+            else if (u.status==="blocked") btns += `<button class="action-btn approve" onclick="updateStatus(${u.id},'approved',this)">Unblock</button>`;
           }
-
-          const avatarHTML = u.profile_picture 
-            ? `<div style="width: 32px; height: 32px; border-radius: 50%; background-image: url(${u.profile_picture}); background-size: cover; background-position: center;"></div>`
-            : `<div style="width: 32px; height: 32px; border-radius: 50%; background: var(--surface-light); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.8rem;">${u.name.substring(0,2).toUpperCase()}</div>`;
-
-          tr.innerHTML = `
-            <td>${u.id}</td>
-            <td style="display: flex; align-items: center; gap: 0.75rem; font-weight: 600;">
-              ${avatarHTML}
-              ${u.name}
-            </td>
-            <td style="color: var(--text-muted);">${u.email}</td>
-            <td>${u.is_admin ? "Admin" : "User"}</td>
-            <td><span class="badge ${u.status}">${u.status}</span></td>
-            <td class="actions">${actionBtns}</td>
-          `;
+          const av = u.profile_picture ? `<div style="width:32px;height:32px;border-radius:50%;background-image:url(${u.profile_picture});background-size:cover;background-position:center;"></div>` : `<div style="width:32px;height:32px;border-radius:50%;background:var(--surface-light);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.8rem;">${u.name.substring(0,2).toUpperCase()}</div>`;
+          tr.innerHTML = `<td>${u.id}</td><td style="display:flex;align-items:center;gap:0.75rem;font-weight:600;">${av}${u.name}</td><td style="color:var(--text-muted);">${u.email}</td><td>${u.is_admin?"Admin":"User"}</td><td><span class="badge ${u.status}">${u.status}</span></td><td class="actions">${btns}</td>`;
           tbody.appendChild(tr);
         });
-
-      } catch (err) {
-        console.error("Error loading users:", err);
-        await window.appAlert("Error", "Failed to load users. See console for details.");
-      }
+      } catch(err) { console.error(err); await window.appAlert("Error","Failed to load users."); }
     }
 
-    async function updateStatus(userId, status) {
-      const confirmed = await window.appAlert("Confirm Action", `Are you sure you want to change user ${userId} status to ${status}?`, true);
-      if (!confirmed) return;
-      
-      const btn = event.target;
-      if (btn) btn.classList.add("loading");
+    async function reload() { if(adminLoadingEl) adminLoadingEl.classList.remove("hidden"); await loadUsers(); if(adminLoadingEl) adminLoadingEl.classList.add("hidden"); }
+
+    async function updateStatus(userId, status, btn) {
+      if (!await window.appAlert("Confirm Action",`Change user ${userId} status to ${status}?`,true)) return;
+      if(btn) btn.classList.add("loading");
       try {
-        const res = await fetch(`/api/admin/users/${userId}/status`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status })
-        });
-        if (!res.ok) throw new Error((await res.json()).error || "Update failed");
-        loadUsers();
-      } catch (err) {
-        console.error(err);
-        await window.appAlert("Error", err.message);
-        if (btn) btn.classList.remove("loading");
-      }
+        const res = await fetch(`/api/admin/users/${userId}/status`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status})});
+        if(!res.ok) throw new Error((await res.json()).error||"Update failed");
+        await reload();
+      } catch(err) { await window.appAlert("Error",err.message); if(btn) btn.classList.remove("loading"); }
     }
 
-    async function deleteUser(userId) {
-      const confirmed = await window.appAlert("Confirm Action", `Are you sure you want to permanently delete user ${userId}? This action cannot be undone.`, true);
-      if (!confirmed) return;
-      
-      const btn = event.target;
-      if (btn) btn.classList.add("loading");
+    async function deleteUser(userId, btn) {
+      if (!await window.appAlert("Confirm Action",`Permanently delete user ${userId}?`,true)) return;
+      if(btn) btn.classList.add("loading");
       try {
-        const res = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
-        if (!res.ok) throw new Error((await res.json()).error || "Delete failed");
-        loadUsers();
-      } catch (err) { 
-        await window.appAlert("Error", err.message); 
-        if (btn) btn.classList.remove("loading");
-      }
+        const res = await fetch(`/api/admin/users/${userId}`,{method:"DELETE"});
+        if(!res.ok) throw new Error((await res.json()).error||"Delete failed");
+        await reload();
+      } catch(err) { await window.appAlert("Error",err.message); if(btn) btn.classList.remove("loading"); }
     }
 
     const editModal = document.getElementById("edit-modal");
-    document.querySelector("#edit-modal .close-modal-btn").addEventListener("click", () => editModal.classList.add("hidden"));
-
+    document.querySelector("#edit-modal .close-modal-btn").addEventListener("click",()=>editModal.classList.add("hidden"));
     let editProfilePicBase64 = null;
-    const editPicInput = document.getElementById("edit-profile-pic");
-    editPicInput.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (ev) => { editProfilePicBase64 = ev.target.result; };
-        reader.readAsDataURL(file);
-      } else {
-        editProfilePicBase64 = null;
-      }
-    });
-
-    function editUser(id, name, isAdmin) {
-      document.getElementById("edit-user-id").value = id;
-      document.getElementById("edit-name").value = name;
-      document.getElementById("edit-role").value = isAdmin ? "1" : "0";
-      document.getElementById("edit-password").value = "";
-      editPicInput.value = "";
-      editProfilePicBase64 = null;
-      editModal.classList.remove("hidden");
-    }
-
-    document.getElementById("edit-form").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const submitBtn = e.target.querySelector('button[type="submit"]');
-      if (submitBtn) submitBtn.classList.add("loading");
-
-      const id = document.getElementById("edit-user-id").value;
-      const payload = {
-        name: document.getElementById("edit-name").value,
-        is_admin: document.getElementById("edit-role").value,
-        password: document.getElementById("edit-password").value
-      };
-      if (editProfilePicBase64) {
-        payload.profile_picture = editProfilePicBase64;
-      }
-      
-      try {
-        const res = await fetch(`/api/admin/users/${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error((await res.json()).error || "Update failed");
-        editModal.classList.add("hidden");
-        loadUsers();
-      } catch (err) { 
-        await window.appAlert("Error", err.message); 
-      } finally {
-        if (submitBtn) submitBtn.classList.remove("loading");
-      }
-    });
-
-    document.getElementById("logout-btn").addEventListener("click", async () => {
-      await fetch("/api/auth/logout", { method: "POST" });
-      window.location.href = "/admin-login.html";
-    });
-
-    // Init
-    const adminLoadingEl = document.getElementById("admin-loading");
-    loadUsers().finally(() => { if (adminLoadingEl) adminLoadingEl.classList.add("hidden"); });
+    document.getElementById("edit-profile-pic").addEventListener("change",e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=ev=>editProfilePicBase64=ev.target.result;r.readAsDataURL(f)}else editProfilePicBase64=null});
+    function editUser(id,name,isAdmin){document.getElementById("edit-user-id").value=id;document.getElementById("edit-name").value=name;document.getElementById("edit-role").value=isAdmin?"1":"0";document.getElementById("edit-password").value="";document.getElementById("edit-profile-pic").value="";editProfilePicBase64=null;editModal.classList.remove("hidden");}
+    document.getElementById("edit-form").addEventListener("submit",async e=>{e.preventDefault();const sb=e.target.querySelector('button[type="submit"]');if(sb)sb.classList.add("loading");const id=document.getElementById("edit-user-id").value,payload={name:document.getElementById("edit-name").value,is_admin:document.getElementById("edit-role").value,password:document.getElementById("edit-password").value};if(editProfilePicBase64)payload.profile_picture=editProfilePicBase64;try{const res=await fetch(`/api/admin/users/${id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});if(!res.ok)throw new Error((await res.json()).error||"Update failed");editModal.classList.add("hidden");await reload()}catch(err){await window.appAlert("Error",err.message)}finally{if(sb)sb.classList.remove("loading")}});
+    document.getElementById("logout-btn").addEventListener("click",async()=>{await fetch("/api/auth/logout",{method:"POST"});window.location.href="/admin-login.html"});
+    loadUsers().finally(()=>{if(adminLoadingEl)adminLoadingEl.classList.add("hidden")});
   </script>
 </body>
 </html>
