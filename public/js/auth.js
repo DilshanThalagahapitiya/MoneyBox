@@ -1,6 +1,6 @@
 async function redirectIfAuthenticated() {
   try {
-    const response = await fetch("/api/auth/me");
+    const response = await fetch("/api/auth/me", { cache: "no-store" });
     const data = await response.json();
     if (data.authenticated) {
       window.location.href = "/";
@@ -73,7 +73,7 @@ function setupAuthForm({
 
 async function requireAuth() {
   try {
-    const response = await fetch("/api/auth/me");
+    const response = await fetch("/api/auth/me", { cache: "no-store" });
     const data = await response.json();
 
     if (!data.authenticated) {
@@ -92,3 +92,211 @@ async function logout() {
   await fetch("/api/auth/logout", { method: "POST" });
   window.location.href = "/login.html";
 }
+
+window.appAlert = function(title, message, isConfirm = false) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay custom-alert-overlay";
+    overlay.style.zIndex = "9999";
+    overlay.style.display = "flex"; // Override hidden display behavior
+    overlay.style.opacity = "0";
+    overlay.style.transition = "opacity 0.2s ease";
+    
+    const content = document.createElement("div");
+    content.className = "modal-content";
+    content.style.maxWidth = "350px";
+    content.style.textAlign = "center";
+    content.style.transform = "scale(0.95)";
+    content.style.transition = "transform 0.2s ease";
+    
+    const header = document.createElement("div");
+    header.className = "modal-header";
+    header.style.borderBottom = "none";
+    header.style.justifyContent = "center";
+    header.style.paddingBottom = "0";
+    header.style.paddingTop = "1.5rem";
+    
+    const titleEl = document.createElement("h2");
+    titleEl.textContent = title;
+    titleEl.style.fontSize = "1.2rem";
+    titleEl.style.margin = "0";
+    header.appendChild(titleEl);
+    
+    const body = document.createElement("div");
+    body.style.padding = "1rem 1.5rem";
+    body.style.color = "var(--text-muted)";
+    body.style.fontSize = "0.95rem";
+    body.style.lineHeight = "1.5";
+    body.textContent = message;
+    
+    const footer = document.createElement("div");
+    footer.style.display = "flex";
+    footer.style.gap = "1rem";
+    footer.style.padding = "0.5rem 1.5rem 1.5rem";
+    footer.style.justifyContent = "center";
+    
+    if (isConfirm) {
+      const cancelBtn = document.createElement("button");
+      cancelBtn.className = "btn-secondary";
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.style.flex = "1";
+      cancelBtn.style.padding = "0.6rem";
+      cancelBtn.onclick = () => {
+        closeAndResolve(false);
+      };
+      
+      const confirmBtn = document.createElement("button");
+      confirmBtn.className = "btn-primary";
+      confirmBtn.textContent = "Confirm";
+      confirmBtn.style.flex = "1";
+      confirmBtn.style.padding = "0.6rem";
+      confirmBtn.onclick = () => {
+        closeAndResolve(true);
+      };
+      
+      footer.appendChild(cancelBtn);
+      footer.appendChild(confirmBtn);
+    } else {
+      const okBtn = document.createElement("button");
+      okBtn.className = "btn-primary";
+      okBtn.textContent = "OK";
+      okBtn.style.flex = "1";
+      okBtn.style.padding = "0.6rem";
+      okBtn.onclick = () => {
+        closeAndResolve(true);
+      };
+      footer.appendChild(okBtn);
+    }
+    
+    content.appendChild(header);
+    content.appendChild(body);
+    content.appendChild(footer);
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+    
+    function closeAndResolve(val) {
+      overlay.style.opacity = "0";
+      content.style.transform = "scale(0.95)";
+      setTimeout(() => {
+        if (document.body.contains(overlay)) {
+          document.body.removeChild(overlay);
+        }
+        resolve(val);
+      }, 200);
+    }
+
+    requestAnimationFrame(() => {
+      overlay.style.opacity = "1";
+      content.style.transform = "scale(1)";
+    });
+  });
+};
+
+window.appPrompt = function(title, message, defaultValue = "") {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay custom-alert-overlay";
+    overlay.style.zIndex = "9999";
+    overlay.style.display = "flex";
+    overlay.style.opacity = "0";
+    overlay.style.transition = "opacity 0.2s ease";
+    
+    const content = document.createElement("div");
+    content.className = "modal-content";
+    content.style.maxWidth = "350px";
+    content.style.textAlign = "center";
+    content.style.transform = "scale(0.95)";
+    content.style.transition = "transform 0.2s ease";
+    
+    const header = document.createElement("div");
+    header.className = "modal-header";
+    header.style.borderBottom = "none";
+    header.style.justifyContent = "center";
+    header.style.paddingBottom = "0";
+    header.style.paddingTop = "1.5rem";
+    
+    const titleEl = document.createElement("h2");
+    titleEl.textContent = title;
+    titleEl.style.fontSize = "1.2rem";
+    titleEl.style.margin = "0";
+    header.appendChild(titleEl);
+    
+    const body = document.createElement("div");
+    body.style.padding = "1rem 1.5rem";
+    body.style.color = "var(--text-muted)";
+    body.style.fontSize = "0.95rem";
+    body.style.lineHeight = "1.5";
+    body.textContent = message;
+    
+    const inputWrapper = document.createElement("div");
+    inputWrapper.style.marginTop = "1rem";
+    
+    const inputEl = document.createElement("input");
+    inputEl.type = "text";
+    inputEl.value = defaultValue;
+    inputEl.style.width = "100%";
+    inputEl.style.padding = "0.75rem";
+    inputEl.style.borderRadius = "var(--radius-sm)";
+    inputEl.style.border = "1px solid rgba(255,255,255,0.15)";
+    inputEl.style.background = "rgba(255,255,255,0.05)";
+    inputEl.style.color = "var(--text)";
+    inputEl.style.fontSize = "1rem";
+    inputEl.style.textAlign = "center";
+    
+    inputWrapper.appendChild(inputEl);
+    body.appendChild(inputWrapper);
+    
+    const footer = document.createElement("div");
+    footer.style.display = "flex";
+    footer.style.gap = "1rem";
+    footer.style.padding = "0.5rem 1.5rem 1.5rem";
+    footer.style.justifyContent = "center";
+    
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "btn-secondary";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.style.flex = "1";
+    cancelBtn.style.padding = "0.6rem";
+    cancelBtn.onclick = () => closeAndResolve(null);
+    
+    const confirmBtn = document.createElement("button");
+    confirmBtn.className = "btn-primary";
+    confirmBtn.textContent = "Submit";
+    confirmBtn.style.flex = "1";
+    confirmBtn.style.padding = "0.6rem";
+    confirmBtn.onclick = () => closeAndResolve(inputEl.value);
+    
+    footer.appendChild(cancelBtn);
+    footer.appendChild(confirmBtn);
+    
+    content.appendChild(header);
+    content.appendChild(body);
+    content.appendChild(footer);
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+    
+    inputEl.focus();
+    
+    // Support pressing Enter
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") closeAndResolve(inputEl.value);
+      if (e.key === "Escape") closeAndResolve(null);
+    });
+    
+    function closeAndResolve(val) {
+      overlay.style.opacity = "0";
+      content.style.transform = "scale(0.95)";
+      setTimeout(() => {
+        if (document.body.contains(overlay)) {
+          document.body.removeChild(overlay);
+        }
+        resolve(val);
+      }, 200);
+    }
+
+    requestAnimationFrame(() => {
+      overlay.style.opacity = "1";
+      content.style.transform = "scale(1)";
+    });
+  });
+};

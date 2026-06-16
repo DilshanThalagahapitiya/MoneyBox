@@ -461,6 +461,20 @@ function rebuildGrid(currentConfig, selectedIndices) {
     cell.setAttribute("aria-label", `Amount ${formatNumber(value)}`);
     
     let pressTimer = null;
+    let lastTapTime = 0;
+
+    const onCellTapped = (e) => {
+      const currentTime = new Date().getTime();
+      const tapLength = currentTime - lastTapTime;
+      if (tapLength > 0 && tapLength < 400) {
+        handleCellClick(cell, index);
+        if (e && e.cancelable) e.preventDefault();
+        lastTapTime = 0;
+      } else {
+        lastTapTime = currentTime;
+      }
+    };
+
     cell.addEventListener("contextmenu", (e) => { e.preventDefault(); });
 
     const startPress = () => {
@@ -483,7 +497,7 @@ function rebuildGrid(currentConfig, selectedIndices) {
     cell.addEventListener("mouseup", (e) => {
       if (pressTimer && e.button === 0) {
         cancelPress();
-        handleCellClick(cell, index);
+        onCellTapped(e);
       }
     });
     cell.addEventListener("mouseleave", cancelPress);
@@ -494,8 +508,8 @@ function rebuildGrid(currentConfig, selectedIndices) {
     cell.addEventListener("touchend", (e) => {
       if (pressTimer) {
         cancelPress();
-        handleCellClick(cell, index);
-        e.preventDefault();
+        onCellTapped(e);
+        if (e.cancelable) e.preventDefault();
       }
     });
     cell.addEventListener("touchcancel", cancelPress);
@@ -524,8 +538,11 @@ function mergeConfigFromServer(data) {
   };
 }
 
+const gridLoadingEl = document.getElementById("grid-loading");
+
 async function loadData() {
   setSaveStatus("Loading...");
+  if (gridLoadingEl) gridLoadingEl.classList.remove("hidden");
 
   try {
     const response = await fetch("/api/data");
@@ -545,6 +562,8 @@ async function loadData() {
     setColorSaveMessage("");
   } catch (error) {
     setSaveStatus("Could not load saved data", true);
+  } finally {
+    if (gridLoadingEl) gridLoadingEl.classList.add("hidden");
   }
 }
 
@@ -604,15 +623,15 @@ function readConfigFromForm() {
   };
 }
 
-function handleCellClick(cell, index) {
+async function handleCellClick(cell, index) {
   if (isCellLocked(index)) {
-    alert("This button is locked.");
+    await window.appAlert("Locked", "This button is locked.");
     return;
   }
 
   if (config.partial_payments && Object.keys(config.partial_payments).length > 0) {
     if (!config.partial_payments[index]) {
-      alert("Please complete full amount for the partially paid cell first.");
+      await window.appAlert("Warning", "Please complete full amount for the partially paid cell first.");
       return;
     } else {
       delete config.partial_payments[index];
@@ -626,9 +645,9 @@ function handleCellClick(cell, index) {
   toggleCell(cell, index);
 }
 
-function handleLongPress(cell, index) {
+async function handleLongPress(cell, index) {
   if (isCellLocked(index)) {
-    alert("This button is locked.");
+    await window.appAlert("Locked", "This button is locked.");
     return;
   }
 
@@ -636,17 +655,17 @@ function handleLongPress(cell, index) {
   
   if (config.partial_payments && Object.keys(config.partial_payments).length > 0) {
     if (!config.partial_payments[index]) {
-      alert("Please complete full amount for the partially paid cell first.");
+      await window.appAlert("Warning", "Please complete full amount for the partially paid cell first.");
       return;
     }
   }
 
   const fullValue = getValueAtIndex(config, index);
-  const amountStr = prompt(`Enter partial amount (Full value: ${fullValue}):`, Math.floor(fullValue / 2));
+  const amountStr = await window.appPrompt("Partial Payment", `Enter partial amount (Full value: ${fullValue}):`, Math.floor(fullValue / 2));
   if (!amountStr) return;
   const amount = parseInt(amountStr, 10);
   if (isNaN(amount) || amount <= 0 || amount >= fullValue) {
-    alert("Invalid partial amount.");
+    await window.appAlert("Error", "Invalid partial amount.");
     return;
   }
 
@@ -732,11 +751,24 @@ async function saveColorRules() {
 }
 
 clearBtn.addEventListener("click", async () => {
-  if (window.confirm("Are you sure you want to clear all selections? This action cannot be undone.")) {
+  const confirmed = await window.appAlert("Clear Selections", "Are you sure you want to clear all selections? This action cannot be undone.", true);
+  if (confirmed) {
+    selected.clear();
     config.partial_payments = {};
     config.selected_timestamps = {};
-    applySelections([]);
-    await saveData();
+    for (const cell of cellByIndex.values()) {
+      cell.classList.remove("selected", "cell-locked");
+      cell.style.backgroundColor = "transparent";
+      cell.style.borderColor = "transparent";
+      cell.style.color = "var(--text)";
+      cell.setAttribute("aria-pressed", "false");
+      const overlay = cell.querySelector(".cell-timer-overlay");
+      if (overlay) overlay.style.background = "transparent";
+      const timerText = cell.querySelector(".cell-timer-text");
+      if (timerText) timerText.textContent = "";
+    }
+    updateSummary();
+    saveData();
   }
 });
 
@@ -825,17 +857,17 @@ function closeModal(modal) {
   modal.classList.add("hidden");
 }
 
-openSettingsBtn.addEventListener("click", () => {
+openSettingsBtn.addEventListener("click", async () => {
   if (selected.size > 0 || (config.partial_payments && Object.keys(config.partial_payments).length > 0)) {
-    alert("You cannot change collection settings while buttons are selected. Please clear all selections first.");
+    await window.appAlert("Action Denied", "You cannot change collection settings while buttons are selected. Please clear all selections first.");
     return;
   }
   openModal(settingsModal);
 });
 
-openColorSettingsBtn.addEventListener("click", () => {
+openColorSettingsBtn.addEventListener("click", async () => {
   if (selected.size > 0 || (config.partial_payments && Object.keys(config.partial_payments).length > 0)) {
-    alert("You cannot change color rules while buttons are selected. Please clear all selections first.");
+    await window.appAlert("Action Denied", "You cannot change color rules while buttons are selected. Please clear all selections first.");
     return;
   }
   openModal(colorSettingsModal);
@@ -881,8 +913,52 @@ async function initApp() {
   }
 
   const picInput = document.getElementById("main-profile-pic-input");
+  const avatarWrapper = document.getElementById("avatar-wrapper");
+  const closeBtn = document.getElementById("avatar-close-btn");
+  
   if (avatarEl && picInput) {
     avatarEl.addEventListener("click", () => picInput.click());
+    
+    function setProfilePic(base64) {
+      avatarEl.style.backgroundImage = `url(${base64})`;
+      avatarEl.style.backgroundSize = "cover";
+      avatarEl.style.backgroundPosition = "center";
+      avatarEl.textContent = "";
+      if (closeBtn) closeBtn.classList.remove("hidden");
+    }
+    
+    function clearProfilePic() {
+      avatarEl.style.backgroundImage = "";
+      avatarEl.style.backgroundSize = "";
+      avatarEl.style.backgroundPosition = "";
+      const initials = user.name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
+      avatarEl.textContent = initials;
+      if (closeBtn) closeBtn.classList.add("hidden");
+    }
+    
+    if (user.profile_picture) {
+      setProfilePic(user.profile_picture);
+    }
+    
+    if (closeBtn) {
+      closeBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        avatarWrapper.classList.add("avatar-loading");
+        try {
+          await fetch("/api/user/profile-picture", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ profile_picture: "" })
+          });
+          clearProfilePic();
+        } catch (err) {
+          console.error("Failed to remove profile picture", err);
+        } finally {
+          avatarWrapper.classList.remove("avatar-loading");
+        }
+      });
+    }
+    
     picInput.addEventListener("change", (e) => {
       const file = e.target.files[0];
       if (file) {
@@ -890,23 +966,19 @@ async function initApp() {
         reader.onload = async (ev) => {
           const base64 = ev.target.result;
           
-          avatarEl.classList.add("loading");
+          avatarWrapper.classList.add("avatar-loading");
           try {
             await fetch("/api/user/profile-picture", {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ profile_picture: base64 })
             });
-            
-            avatarEl.style.backgroundImage = `url(${base64})`;
-            avatarEl.style.backgroundSize = "cover";
-            avatarEl.style.backgroundPosition = "center";
-            avatarEl.textContent = "";
+            setProfilePic(base64);
           } catch (err) {
             console.error("Failed to update profile picture", err);
-            alert("Failed to upload profile picture");
+            await window.appAlert("Error", "Failed to upload profile picture");
           } finally {
-            avatarEl.classList.remove("loading");
+            avatarWrapper.classList.remove("avatar-loading");
           }
         };
         reader.readAsDataURL(file);

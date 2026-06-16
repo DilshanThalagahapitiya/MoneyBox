@@ -190,15 +190,17 @@
         window.location.href = "/admin-login.html";
         return;
       }
-      if (!user.is_admin) {
-        alert("Access Denied: You are not an admin.");
-        window.location.href = "/";
-        return;
-      }
 
       try {
         const response = await fetch("/api/admin/users");
-        if (!response.ok) throw new Error("Failed to load users");
+        if (!response.ok) {
+          if (response.status === 403) {
+            await window.appAlert("Access Denied", "You are not an admin.");
+            window.location.href = "/";
+            return;
+          }
+          throw new Error("Failed to fetch users");
+        }
         const data = await response.json();
         
         const tbody = document.querySelector("#users-table tbody");
@@ -239,13 +241,15 @@
         });
 
       } catch (err) {
-        console.error(err);
-        alert("Failed to load users. See console for details.");
+        console.error("Error loading users:", err);
+        await window.appAlert("Error", "Failed to load users. See console for details.");
       }
     }
 
     async function updateStatus(userId, status) {
-      if (!confirm(`Are you sure you want to change user ${userId} status to ${status}?`)) return;
+      const confirmed = await window.appAlert("Confirm Action", `Are you sure you want to change user ${userId} status to ${status}?`, true);
+      if (!confirmed) return;
+      
       const btn = event.target;
       if (btn) btn.classList.add("loading");
       try {
@@ -254,22 +258,19 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status })
         });
-        
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || "Update failed");
-        }
-        
+        if (!res.ok) throw new Error((await res.json()).error || "Update failed");
         loadUsers();
       } catch (err) {
         console.error(err);
-        alert(err.message);
+        await window.appAlert("Error", err.message);
         if (btn) btn.classList.remove("loading");
       }
     }
 
     async function deleteUser(userId) {
-      if (!confirm(`Are you sure you want to permanently delete user ${userId}? This action cannot be undone.`)) return;
+      const confirmed = await window.appAlert("Confirm Action", `Are you sure you want to permanently delete user ${userId}? This action cannot be undone.`, true);
+      if (!confirmed) return;
+      
       const btn = event.target;
       if (btn) btn.classList.add("loading");
       try {
@@ -277,7 +278,7 @@
         if (!res.ok) throw new Error((await res.json()).error || "Delete failed");
         loadUsers();
       } catch (err) { 
-        alert(err.message); 
+        await window.appAlert("Error", err.message); 
         if (btn) btn.classList.remove("loading");
       }
     }
@@ -333,7 +334,7 @@
         editModal.classList.add("hidden");
         loadUsers();
       } catch (err) { 
-        alert(err.message); 
+        await window.appAlert("Error", err.message); 
       } finally {
         if (submitBtn) submitBtn.classList.remove("loading");
       }

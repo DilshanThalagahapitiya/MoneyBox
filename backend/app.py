@@ -20,6 +20,7 @@ from backend.database import (
     update_user_details,
     save_collection_state,
     update_user_password,
+    mark_reset_token_used,
 )
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -78,8 +79,6 @@ def create_app() -> Flask:
             return jsonify({"error": "An account with this email already exists"}), 409
 
         user = create_user(name, email, generate_password_hash(password, method=PASSWORD_HASH_METHOD))
-        if profile_picture:
-            update_user_details(user["id"], name, 0, None, profile_picture)
         return jsonify({"ok": True, "message": "Account created. Please wait for admin approval."})
 
     @app.post("/api/auth/admin-signup")
@@ -126,7 +125,7 @@ def create_app() -> Flask:
 
         session.clear()
         session["user_id"] = user["id"]
-        return jsonify(
+        response = jsonify(
             {
                 "ok": True,
                 "user": {
@@ -140,6 +139,15 @@ def create_app() -> Flask:
                 },
             }
         )
+        return response
+
+    @app.after_request
+    def add_cache_control(response):
+        if request.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        return response
 
     @app.post("/api/auth/logout")
     def auth_logout():
@@ -255,9 +263,6 @@ def create_app() -> Flask:
         payload = request.get_json(silent=True) or {}
         profile_picture = payload.get("profile_picture")
         
-        if not profile_picture:
-            return jsonify({"error": "No profile picture provided"}), 400
-            
         update_user_details(user["id"], user["name"], user["is_admin"], None, profile_picture)
         return jsonify({"ok": True, "message": "Profile picture updated"})
 

@@ -14,7 +14,10 @@
     <header class="app-header">
       <div class="top-bar">
         <div class="user-profile">
-          <div class="user-avatar" id="user-avatar-initials" style="cursor: pointer;" title="Change Profile Picture">DT</div>
+          <div class="avatar-wrapper" id="avatar-wrapper">
+            <div class="user-avatar" id="user-avatar-initials" style="cursor: pointer;" title="Change Profile Picture">DT</div>
+            <button type="button" class="avatar-close hidden" id="avatar-close-btn" aria-label="Remove profile picture">×</button>
+          </div>
           <input type="file" id="main-profile-pic-input" accept="image/*" style="display: none;">
           <div class="user-info">
             <span id="user-name" class="user-name"></span>
@@ -85,10 +88,14 @@
 
       <main class="main-content">
         <div class="grid-card">
-          <div class="grid-header">
+          <div class="grid-header" style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem;">
             <h2>Select Amount</h2>
+            <span style="font-size: 0.8rem; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 0.3rem 0.6rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+              👆 Double-tap to select
+            </span>
           </div>
           <div id="grid" class="grid" role="grid" aria-label="Money collection grid"></div>
+          <div id="grid-loading" class="grid-loading hidden"><div class="grid-loading-spinner"></div><span>Loading...</span></div>
         </div>
         
         <section class="saved-selections">
