@@ -13,6 +13,31 @@
       margin: 2rem auto;
       padding: 0 1rem;
     }
+    .admin-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+      gap: 1rem;
+      color: var(--text-muted);
+    }
+    .admin-loading.hidden { display: none; }
+    .admin-loading .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    .admin-table-wrap { position: relative; }
+    .admin-table-wrap .admin-loading {
+      position: absolute; inset: 0;
+      background: rgba(15,17,23,0.7);
+      backdrop-filter: blur(4px);
+      border-radius: 16px;
+      z-index: 10;
+    }
     
     .admin-header {
       display: flex;
@@ -124,7 +149,11 @@
       </div>
     </div>
 
-    <div class="table-card">
+    <div class="table-card admin-table-wrap">
+      <div id="admin-loading" class="admin-loading">
+        <div class="spinner"></div>
+        <span>Loading users...</span>
+      </div>
       <table id="users-table">
         <thead>
           <tr>
@@ -346,7 +375,8 @@
     });
 
     // Init
-    loadUsers();
+    const adminLoadingEl = document.getElementById("admin-loading");
+    loadUsers().finally(() => { if (adminLoadingEl) adminLoadingEl.classList.add("hidden"); });
   </script>
 </body>
 </html>
