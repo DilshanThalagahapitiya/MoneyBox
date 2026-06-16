@@ -14,8 +14,9 @@
     .admin-loading .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.6s linear infinite; }
     .admin-table-wrap { position: relative; }
     .admin-table-wrap .admin-loading { position: absolute; inset: 0; background: rgba(15,17,23,0.7); backdrop-filter: blur(4px); border-radius: 16px; z-index: 10; }
-    .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
     .admin-header h1 { font-size: 1.8rem; }
+    .admin-header-actions { display: flex; gap: 0.75rem; align-items: center; }
     .table-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; overflow-x: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
     table { width: 100%; border-collapse: collapse; text-align: left; }
     th, td { padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
@@ -33,6 +34,17 @@
     .action-btn.block { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #fca5a5; }
     .action-btn.block:hover { background: rgba(239,68,68,0.25); }
     .actions { display: flex; gap: 0.5rem; }
+
+    /* Export / Import styles */
+    .btn-export { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); color: #6ee7b7; }
+    .btn-export:hover { background: rgba(16,185,129,0.25); }
+    .btn-import { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.4); color: #a5b4fc; }
+    .btn-import:hover { background: rgba(99,102,241,0.25); }
+    .file-input-hidden { display: none; }
+    .global-loading-overlay { position: fixed; inset: 0; background: rgba(15,17,23,0.85); backdrop-filter: blur(8px); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 1.5rem; }
+    .global-loading-overlay.hidden { display: none; }
+    .global-loading-overlay .spinner { width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.6s linear infinite; }
+    .global-loading-overlay .loading-text { color: var(--text-muted); font-size: 1.1rem; }
   </style>
 </head>
 <body>
@@ -42,7 +54,11 @@
         <h1>Admin Dashboard</h1>
         <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.2rem;">Manage users and access permissions</p>
       </div>
-      <div><button id="logout-btn" type="button" class="btn-logout">Logout</button></div>
+      <div class="admin-header-actions">
+        <button id="export-btn" type="button" class="action-btn btn-export">⬇ Export DB</button>
+        <button id="import-btn" type="button" class="action-btn btn-import">⬆ Import DB</button>
+        <button id="logout-btn" type="button" class="btn-logout">Logout</button>
+      </div>
     </div>
     <div class="table-card admin-table-wrap">
       <div id="admin-loading" class="admin-loading"><div class="spinner"></div><span>Loading users...</span></div>
@@ -52,6 +68,16 @@
       </table>
     </div>
   </div>
+
+  <!-- Hidden file input for import -->
+  <input type="file" id="import-file-input" class="file-input-hidden" accept=".json,application/json">
+
+  <!-- Global loading overlay for export/import -->
+  <div id="global-loading-overlay" class="global-loading-overlay hidden">
+    <div class="spinner"></div>
+    <span id="global-loading-text" class="loading-text">Processing...</span>
+  </div>
+
   <div id="edit-modal" class="modal-overlay hidden">
     <div class="modal glass-modal">
       <div class="modal-header"><h2>Edit User</h2><button type="button" class="close-modal-btn">&times;</button></div>
@@ -68,6 +94,18 @@
   <script src="/js/auth.js"></script>
   <script>
     const adminLoadingEl = document.getElementById("admin-loading");
+    const globalLoadingOverlay = document.getElementById("global-loading-overlay");
+    const globalLoadingText = document.getElementById("global-loading-text");
+
+    function showGlobalLoading(text) {
+      globalLoadingText.textContent = text || "Processing...";
+      globalLoadingOverlay.classList.remove("hidden");
+    }
+
+    function hideGlobalLoading() {
+      globalLoadingOverlay.classList.add("hidden");
+    }
+
     async function loadUsers() {
       let user = null;
       try { const r = await fetch("/api/auth/me"); user = (await r.json()).user; } catch(e) {}
@@ -124,7 +162,86 @@
     function editUser(id,name,isAdmin){document.getElementById("edit-user-id").value=id;document.getElementById("edit-name").value=name;document.getElementById("edit-role").value=isAdmin?"1":"0";document.getElementById("edit-password").value="";document.getElementById("edit-profile-pic").value="";editProfilePicBase64=null;editModal.classList.remove("hidden");}
     document.getElementById("edit-form").addEventListener("submit",async e=>{e.preventDefault();const sb=e.target.querySelector('button[type="submit"]');if(sb)sb.classList.add("loading");const id=document.getElementById("edit-user-id").value,payload={name:document.getElementById("edit-name").value,is_admin:document.getElementById("edit-role").value,password:document.getElementById("edit-password").value};if(editProfilePicBase64)payload.profile_picture=editProfilePicBase64;try{const res=await fetch(`/api/admin/users/${id}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});if(!res.ok)throw new Error((await res.json()).error||"Update failed");editModal.classList.add("hidden");await reload()}catch(err){await window.appAlert("Error",err.message)}finally{if(sb)sb.classList.remove("loading")}});
     document.getElementById("logout-btn").addEventListener("click",async()=>{await fetch("/api/auth/logout",{method:"POST"});window.location.href="/admin-login.html"});
-    loadUsers().finally(()=>{if(adminLoadingEl)adminLoadingEl.classList.add("hidden")});
+
+    // --- Export Database ---
+    document.getElementById("export-btn").addEventListener("click", async () => {
+      showGlobalLoading("Exporting database...");
+      try {
+        const res = await fetch("/api/admin/export");
+        if (!res.ok) throw new Error((await res.json()).error || "Export failed");
+        const data = await res.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `moneybox-export-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        await window.appAlert("Export Complete", `Exported ${data.users.length} users and ${data.selections.length} selections.`);
+      } catch (err) {
+        await window.appAlert("Export Error", err.message);
+      } finally {
+        hideGlobalLoading();
+      }
+    });
+
+    // --- Import Database ---
+    const importFileInput = document.getElementById("import-file-input");
+    document.getElementById("import-btn").addEventListener("click", () => {
+      importFileInput.click();
+    });
+
+    importFileInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // Validate file type
+      if (!file.name.endsWith(".json") && file.type !== "application/json") {
+        await window.appAlert("Import Error", "Please select a JSON file.");
+        importFileInput.value = "";
+        return;
+      }
+
+      const confirmed = await window.appAlert(
+        "Confirm Import",
+        "This will REPLACE all existing users and data with the imported file. User passwords will be preserved from the export file. Are you sure?",
+        true
+      );
+      if (!confirmed) {
+        importFileInput.value = "";
+        return;
+      }
+
+      showGlobalLoading("Importing database...");
+      try {
+        const text = await file.text();
+        let data;
+        try { data = JSON.parse(text); } catch {
+          throw new Error("Invalid JSON file.");
+        }
+
+        const res = await fetch("/api/admin/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || "Import failed");
+
+        await window.appAlert("Import Complete", result.message);
+        await reload();
+      } catch (err) {
+        await window.appAlert("Import Error", err.message);
+      } finally {
+        importFileInput.value = "";
+        hideGlobalLoading();
+      }
+    });
+
+    loadUsers().finally(() => { if(adminLoadingEl) adminLoadingEl.classList.add("hidden"); });
   </script>
 </body>
 </html>

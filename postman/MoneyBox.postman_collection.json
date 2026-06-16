@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "MoneyBox API",
-    "description": "Complete API collection for MoneyBox — a money collection tracking app with tab-scoped authentication isolation.\n\n## Tab Isolation Strategy\n\nThis app uses server-side sessions keyed by a unique tab identifier (`X-Tab-Id` header) instead of browser cookies. Each browser tab generates a unique ID stored in `sessionStorage` and sends it with every request via a global `fetch()` override.\n\n**Key concepts for testing:**\n- Each `X-Tab-Id` value represents an independent \"browser tab\"\n- Tab A and Tab B can be logged in as different users simultaneously\n- Logging out from one tab does NOT affect other tabs\n- Omitting the header equals a fresh, unauthenticated tab\n\n## Collection Structure\n\nThe collection is organised into folders:\n1. **🔐 Authentication** — Signup, Login, Logout, Session check\n2. **👤 Profile** — Profile picture management\n3. **📊 Collection** — Grid data, selections, partial payments\n4. **🎨 Color Rules** — Manage color ranges\n5. **⚙️ Settings** — Collection & lock settings\n6. **🛡️ Admin** — User management (admin only)\n7. **🔁 Tab Isolation Tests** — Multi-tab scenario tests",
+    "description": "Complete API collection for MoneyBox — a money collection tracking app with tab-scoped authentication isolation.\n\n## Tab Isolation Strategy\n\nThis app uses server-side sessions keyed by a unique tab identifier (`X-Tab-Id` header) instead of browser cookies. Each browser tab generates a unique ID stored in `sessionStorage` and sends it with every request via a global `fetch()` override.\n\n**Key concepts for testing:**\n- Each `X-Tab-Id` value represents an independent \"browser tab\"\n- Tab A and Tab B can be logged in as different users simultaneously\n- Logging out from one tab does NOT affect other tabs\n- Omitting the header equals a fresh, unauthenticated tab\n\n## Real Database Users\n\nThese users exist in the default database:\n- `admin_a@test.com` / `admin123` (admin)\n- `admin_b@test.com` / `admin456` (admin)\n- `usera@test.com` / `pass123` (regular user)\n- `dilshan.thalagahapitiya111@gmail.com` / `1234567890` (admin)\n\n## Collection Structure\n\n1. **🔐 Authentication** — Signup, Login, Logout, Session check\n2. **👤 Profile** — Profile picture management\n3. **📊 Collection** — Grid data, selections, partial payments\n4. **🎨 Color Rules** — Manage color ranges\n5. **🛡️ Admin** — User management + Export/Import DB\n6. **🔁 Tab Isolation Tests** — Multi-tab scenario tests",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "moneybox"
   },
@@ -62,7 +62,6 @@
                   "    pm.expect(jsonData.ok).to.be.true;",
                   "    pm.expect(jsonData.user).to.have.property('id');",
                   "    pm.expect(jsonData.user.is_admin).to.equal(1);",
-                  "    pm.collectionVariables.set('admin_user_id', jsonData.user.id);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -130,7 +129,7 @@
           }
         },
         {
-          "name": "Login",
+          "name": "Login as Admin",
           "event": [
             {
               "listen": "test",
@@ -140,6 +139,8 @@
                   "    const jsonData = pm.response.json();",
                   "    pm.expect(jsonData.ok).to.be.true;",
                   "    pm.expect(jsonData.user).to.have.property('id');",
+                  "    pm.expect(jsonData.user.is_admin).to.equal(1);",
+                  "    pm.expect(jsonData.user.email).to.eql(pm.variables.get('admin_email'));",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -167,7 +168,49 @@
               "host": ["{{base_url}}"],
               "path": ["api", "auth", "login"]
             },
-            "description": "Logs in with email & password. Session is scoped to this X-Tab-Id only."
+            "description": "Logs in as admin_a@test.com / admin123. Session is scoped to this X-Tab-Id only."
+          }
+        },
+        {
+          "name": "Login as Regular User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Login successful\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.be.true;",
+                  "    pm.expect(jsonData.user).to.have.property('id');",
+                  "    pm.expect(jsonData.user.is_admin).to.equal(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tab-Id",
+                "value": "{{tab_b_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{user_email}}\",\n    \"password\": \"{{user_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Logs in as usera@test.com / pass123 (regular user, not admin)."
           }
         },
         {
@@ -232,7 +275,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "auth", "forgot-password"]
             },
-            "description": "Initiates password reset. The reset_url will be in the server console output."
+            "description": "Initiates password reset. Check server console for the reset URL."
           }
         },
         {
@@ -407,7 +450,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "admin", "users"]
             },
-            "description": "Returns all users (admin only). Requires the current tab to be logged in as admin."
+            "description": "Returns all users. Requires admin session on this tab."
           }
         },
         {
@@ -433,7 +476,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "admin", "users", "{{existing_user_id}}", "status"]
             },
-            "description": "Changes user status: approved, pending, or blocked. Admin only."
+            "description": "Changes user status: approved, pending, or blocked."
           }
         },
         {
@@ -459,7 +502,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "admin", "users", "{{existing_user_id}}"]
             },
-            "description": "Updates user name, role, and optionally password. Admin only."
+            "description": "Updates user name, role, and optionally password."
           }
         },
         {
@@ -477,11 +520,89 @@
               "host": ["{{base_url}}"],
               "path": ["api", "admin", "users", "{{existing_user_id}}"]
             },
-            "description": "Permanently deletes a user. Admin only, cannot delete yourself."
+            "description": "Permanently deletes a user. Cannot delete yourself."
+          }
+        },
+        {
+          "name": "Export Database (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Export succeeded\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.users).to.be.an('array');",
+                  "    pm.expect(jsonData.selections).to.be.an('array');",
+                  "    if (jsonData.users.length > 0) {",
+                  "        pm.expect(jsonData.users[0]).to.have.property('password_hash');",
+                  "    }",
+                  "    pm.collectionVariables.set('exported_data', JSON.stringify(jsonData));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tab-Id",
+                "value": "{{tab_a_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/export",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "export"]
+            },
+            "description": "Exports full database (users + selections including password hashes). Admin only."
+          }
+        },
+        {
+          "name": "Import Database (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Import succeeded\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.ok).to.be.true;",
+                  "    pm.expect(jsonData.message).to.include('imported');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tab-Id",
+                "value": "{{import_tab_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{exported_data}}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/import",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "import"]
+            },
+            "description": "Imports database from a previously exported JSON. Replaces all data. Passwords preserved from export. Admin only.\n\n**Important:** Run \"Export Database\" first to populate `exported_data` collection variable, or paste your own export JSON."
           }
         }
       ],
-      "description": "Admin-only endpoints for user management."
+      "description": "Admin-only endpoints for user management and database import/export."
     },
     {
       "name": "🔁 Tab Isolation Tests",
@@ -531,6 +652,7 @@
                       "    const json = pm.response.json();",
                       "    pm.expect(json.authenticated).to.be.true;",
                       "    pm.expect(json.user.email).to.eql(pm.variables.get('admin_email'));",
+                      "    pm.expect(json.user.is_admin).to.equal(1);",
                       "});"
                     ],
                     "type": "text/javascript"

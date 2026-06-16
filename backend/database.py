@@ -429,6 +429,103 @@ def save_collection(user_id: int, selected: list[int]) -> None:
     save_collection_state(user_id, selected, state["config"])
 
 
+def export_full_database() -> dict:
+    """Export all users and collection selections as a JSON-serializable dict.
+
+    Includes password_hash so that importing back restores full user accounts.
+    Exports to an admin-only endpoint; the admin is trusted to handle this data.
+    """
+    with get_connection() as connection:
+        users = [dict(row) for row in connection.execute(
+            "SELECT id, name, email, password_hash, created_at, is_admin, status, profile_picture FROM users ORDER BY id"
+        ).fetchall()]
+        selections = [dict(row) for row in connection.execute(
+            "SELECT user_id, selected_json, config_json, updated_at FROM collection_selections ORDER BY user_id"
+        ).fetchall()]
+        return {"users": users, "selections": selections}
+
+
+def import_full_database(data: dict) -> tuple[bool, str]:
+    """Import users and collection selections from a previously exported dict.
+
+    Validates structure and sanitizes data before writing.
+    Returns (success, message).
+    """
+    if not isinstance(data, dict):
+        return False, "Invalid format: root must be an object"
+
+    users = data.get("users", [])
+    selections = data.get("selections", [])
+
+    if not isinstance(users, list) or not isinstance(selections, list):
+        return False, "Invalid format: 'users' and 'selections' must be arrays"
+
+    # Validate user structure
+    allowed_user_keys = {"id", "name", "email", "password_hash", "created_at", "is_admin", "status", "profile_picture"}
+    for u in users:
+        if not isinstance(u, dict):
+            return False, "Invalid format: each user must be an object"
+        if not u.get("name") or not u.get("email"):
+            return False, "Invalid format: each user must have name and email"
+        extra = set(u.keys()) - allowed_user_keys
+        if extra:
+            return False, f"Invalid format: unexpected user keys: {extra}"
+
+    # Validate selection structure
+    for s in selections:
+        if not isinstance(s, dict):
+            return False, "Invalid format: each selection must be an object"
+        if not s.get("user_id"):
+            return False, "Invalid format: each selection must have user_id"
+        # Ensure config_json and selected_json are valid JSON
+        for key in ("config_json", "selected_json"):
+            val = s.get(key)
+            if val:
+                try:
+                    json.loads(val) if isinstance(val, str) else None
+                except (json.JSONDecodeError, TypeError):
+                    return False, f"Invalid format: {key} is not valid JSON"
+
+    # Replace the database within a single transaction
+    with get_connection() as connection:
+        try:
+            connection.execute("DELETE FROM collection_selections")
+            connection.execute("DELETE FROM password_reset_tokens")
+            connection.execute("DELETE FROM users")
+
+            for u in users:
+                connection.execute(
+                    """INSERT INTO users (id, name, email, password_hash, created_at, is_admin, status, profile_picture)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        int(u["id"]),
+                        str(u["name"]).strip(),
+                        str(u["email"]).strip().lower(),
+                        str(u.get("password_hash", "")),
+                        str(u.get("created_at", _utc_now())),
+                        int(u.get("is_admin", 0)),
+                        str(u.get("status", "approved")),
+                        u.get("profile_picture"),
+                    ),
+                )
+
+            for s in selections:
+                connection.execute(
+                    """INSERT INTO collection_selections (user_id, selected_json, config_json, updated_at)
+                       VALUES (?, ?, ?, ?)""",
+                    (
+                        int(s["user_id"]),
+                        s.get("selected_json", "[]"),
+                        s.get("config_json", json.dumps(DEFAULT_CONFIG)),
+                        s.get("updated_at", _utc_now()),
+                    ),
+                )
+        except Exception as e:
+            return False, f"Import failed: {str(e)}"
+
+    return True, f"Successfully imported {len(users)} users and {len(selections)} selections."
+
+
 def save_collection_state(user_id: int, selected: list[int], config: dict) -> None:
     normalized_config = _normalize_config(config)
     cleaned_selected = _normalize_selected(selected, normalized_config)

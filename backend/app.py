@@ -21,6 +21,8 @@ from backend.database import (
     save_collection_state,
     update_user_password,
     mark_reset_token_used,
+    export_full_database,
+    import_full_database,
 )
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -438,6 +440,42 @@ def create_app() -> Flask:
                 "config": config,
             }
         )
+
+    @app.get("/api/admin/export")
+    def admin_export():
+        user, err = login_required()
+        if err: return err
+        if not user.get("is_admin"):
+            return jsonify({"error": "Forbidden"}), 403
+
+        try:
+            data = export_full_database()
+            response = jsonify(data)
+            response.headers["Content-Disposition"] = "attachment; filename=moneybox-export.json"
+            return response
+        except Exception as e:
+            return jsonify({"error": f"Export failed: {str(e)}"}), 500
+
+    @app.post("/api/admin/import")
+    def admin_import():
+        user, err = login_required()
+        if err: return err
+        if not user.get("is_admin"):
+            return jsonify({"error": "Forbidden"}), 403
+
+        try:
+            payload = request.get_json(silent=True) or {}
+        except Exception:
+            return jsonify({"error": "Invalid JSON payload"}), 400
+
+        if not payload:
+            return jsonify({"error": "No data provided"}), 400
+
+        success, message = import_full_database(payload)
+        if not success:
+            return jsonify({"error": message}), 400
+
+        return jsonify({"ok": True, "message": message})
 
     @app.get("/<path:filename>")
     def public_files(filename):
