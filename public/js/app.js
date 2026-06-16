@@ -859,18 +859,45 @@ function closeModal(modal) {
 }
 
 openSettingsBtn.addEventListener("click", async () => {
-  if (selected.size > 0 || (config.partial_payments && Object.keys(config.partial_payments).length > 0)) {
-    await window.appAlert("Action Denied", "You cannot change collection settings while buttons are selected. Please clear all selections first.");
-    return;
-  }
+  const hasSelections = selected.size > 0 || (config.partial_payments && Object.keys(config.partial_payments).length > 0);
   openModal(settingsModal);
+
+  // If selections exist, disable all fields except Columns
+  const fields = [
+    document.getElementById("start-value"),
+    document.getElementById("gap-value"),
+    document.getElementById("button-count"),
+    document.getElementById("same-value"),
+  ];
+  const columnsField = document.getElementById("columns");
+  const submitBtn = settingsModal.querySelector('.settings-submit');
+
+  if (hasSelections) {
+    fields.forEach(f => { f.disabled = true; f.style.opacity = "0.5"; });
+    columnsField.disabled = false;
+    columnsField.style.opacity = "1";
+    submitBtn.textContent = "Update columns only";
+    // Show a notice
+    let notice = document.getElementById("selection-notice");
+    if (!notice) {
+      notice = document.createElement("p");
+      notice.id = "selection-notice";
+      notice.style.cssText = "grid-column:1/-1;font-size:0.8rem;color:#eab308;background:rgba(234,179,8,0.1);padding:0.5rem 0.75rem;border-radius:8px;border:1px solid rgba(234,179,8,0.2);margin-top:-0.5rem;";
+      settingsForm.insertBefore(notice, submitBtn);
+    }
+    notice.textContent = "⚠️ Buttons are selected — only Columns can be changed. Clear selections to edit all settings.";
+    notice.style.display = "block";
+  } else {
+    fields.forEach(f => { f.disabled = false; f.style.opacity = "1"; });
+    columnsField.disabled = false;
+    columnsField.style.opacity = "1";
+    submitBtn.textContent = "Apply settings";
+    const notice = document.getElementById("selection-notice");
+    if (notice) notice.style.display = "none";
+  }
 });
 
 openColorSettingsBtn.addEventListener("click", async () => {
-  if (selected.size > 0 || (config.partial_payments && Object.keys(config.partial_payments).length > 0)) {
-    await window.appAlert("Action Denied", "You cannot change color rules while buttons are selected. Please clear all selections first.");
-    return;
-  }
   openModal(colorSettingsModal);
 });
 

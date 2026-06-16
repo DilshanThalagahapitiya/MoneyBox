@@ -42,15 +42,24 @@ async function redirectIfAuthenticated() {
   }
 }
 
-function setFormMessage(message, isError = false) {
+function setFormMessage(message, type) {
   const messageEl = document.getElementById("form-message");
   if (!messageEl) {
     return;
   }
 
   messageEl.textContent = message;
-  messageEl.classList.toggle("error", isError);
-  messageEl.classList.toggle("success", !isError && Boolean(message));
+  messageEl.classList.remove("error", "success", "pending");
+
+  if (!message) return;
+
+  if (type === "success") {
+    messageEl.classList.add("success");
+  } else if (type === "pending") {
+    messageEl.classList.add("pending");
+  } else {
+    messageEl.classList.add("error");
+  }
 }
 
 function setupAuthForm({
@@ -86,17 +95,17 @@ function setupAuthForm({
       const data = await response.json();
 
       if (!response.ok) {
-        setFormMessage(data.error || "Request failed", true);
+        setFormMessage(data.error || "Request failed");
       } else if (onSuccess) {
         onSuccess(data, setFormMessage);
       } else if (successRedirect) {
-        setFormMessage(successMessage || "Success!");
+        setFormMessage(successMessage || "Success!", "success");
         setTimeout(() => {
           window.location.href = successRedirect;
         }, 1000);
       }
     } catch (error) {
-      setFormMessage("Network error occurred. Please try again.", true);
+      setFormMessage("Network error occurred. Please try again.");
     } finally {
       if (submitBtn) submitBtn.classList.remove("loading");
     }
